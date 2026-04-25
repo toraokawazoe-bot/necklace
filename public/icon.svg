@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#1a1a1a"/>
+  <path d="M 140 180 Q 256 280 372 180" stroke="#faf9f6" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <circle cx="180" cy="210" r="8" fill="#faf9f6"/>
+  <circle cx="220" cy="240" r="8" fill="#faf9f6"/>
+  <circle cx="292" cy="240" r="8" fill="#faf9f6"/>
+  <circle cx="332" cy="210" r="8" fill="#faf9f6"/>
+  <circle cx="256" cy="258" r="14" fill="#97C459"/>
+  <circle cx="256" cy="258" r="14" fill="none" stroke="#faf9f6" stroke-width="2"/>
+  <text x="256" y="400" text-anchor="middle" font-family="serif" font-size="72" font-weight="500" fill="#faf9f6" letter-spacing="4">注文</text>
+</svg>
