@@ -1,8 +1,10 @@
-import { Order } from "./types";
+import { Order, ItemType, PaymentMethod } from "./types";
 
 const BASE = 1777167889988;
 
-export const SEED_ORDERS: Order[] = [
+type RawOrder = { customer: string; type: ItemType; design: string; length: string; payment: PaymentMethod };
+
+export const SEED_ORDERS: Order[] = ([
   { customer: "大士郎", type: "ネックレス", design: "シンプルでも個性出せるお任せ", length: "", payment: "" },
   { customer: "まゆまま", type: "ネックレス", design: "赤×ネイビー", length: "", payment: "" },
   { customer: "菅", type: "ネックレス", design: "黄緑×黄色、黄色ちょこちょこ", length: "", payment: "" },
@@ -26,7 +28,7 @@ export const SEED_ORDERS: Order[] = [
   { customer: "おざき", type: "ネックレス", design: "ターコイズ×星", length: "", payment: "" },
   { customer: "おざき", type: "ブレスレット", design: "", length: "40", payment: "" },
   { customer: "莉斗", type: "ネックレス", design: "黒×シルバー", length: "39", payment: "" },
-].map((o, i) => ({
+] as RawOrder[]).map((o, i) => ({
   id: `seed_${BASE + i}`,
   created: BASE + i,
   status: "制作中" as const,
