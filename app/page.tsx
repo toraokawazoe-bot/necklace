@@ -29,12 +29,12 @@ export default function Home() {
 
   useEffect(() => {
     loadOrders().then(async (o) => {
-      if (o.length === 0) {
-        await saveOrders(SEED_ORDERS);
-        setOrders(SEED_ORDERS);
-      } else {
-        setOrders(o);
+      const merged = [...o];
+      for (const item of SEED_ORDERS) {
+        if (!merged.some((x) => x.id === item.id)) merged.push(item);
       }
+      await saveOrders(merged);
+      setOrders(merged);
       setLoaded(true);
     });
   }, []);
