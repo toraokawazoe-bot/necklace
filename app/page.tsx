@@ -26,11 +26,15 @@ export default function Home() {
   const [filter, setFilter] = useState<Filter>("all");
   const [editing, setEditing] = useState<Order | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [seedDone, setSeedDone] = useState(false);
 
   useEffect(() => {
-    loadOrders().then((o) => {
-      setOrders(o);
+    loadOrders().then(async (o) => {
+      if (o.length === 0) {
+        await saveOrders(SEED_ORDERS);
+        setOrders(SEED_ORDERS);
+      } else {
+        setOrders(o);
+      }
       setLoaded(true);
     });
   }, []);
@@ -61,15 +65,6 @@ export default function Home() {
     setEditing(null);
   };
 
-  const handleSeedImport = async () => {
-    const merged = [...orders];
-    for (const item of SEED_ORDERS) {
-      if (!merged.some((o) => o.id === item.id)) merged.push(item);
-    }
-    await persist(merged);
-    setSeedDone(true);
-  };
-
   const inboxCount = orders.filter((o) => o.status === "受信トレイ").length;
   const progressCount = orders.filter((o) =>
     ["問い合わせ中", "制作中", "支払い待ち", "発送待ち"].includes(o.status)
@@ -88,12 +83,7 @@ export default function Home() {
     <main className={styles.main}>
       <header className={styles.header}>
         <h1 className={styles.title}>オーダー管理</h1>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          {!seedDone && orders.length === 0 && (
-            <button className={styles.importBtn} onClick={handleSeedImport}>制作中リストを読み込む</button>
-          )}
-          <span className={styles.count}>{orders.length}件</span>
-        </div>
+        <span className={styles.count}>{orders.length}件</span>
       </header>
 
       <div className={styles.stats}>
