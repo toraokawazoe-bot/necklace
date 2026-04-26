@@ -2,7 +2,7 @@ import { Order, ItemType, PaymentMethod } from "./types";
 
 const BASE = 1777167889988;
 
-type RawOrder = { customer: string; type: ItemType; design: string; length: string; payment: PaymentMethod };
+type RawOrder = { customer: string; type: ItemType; design: string; length: string; payment: PaymentMethod; memo?: string };
 
 export const SEED_ORDERS: Order[] = ([
   { customer: "大士郎", type: "ネックレス", design: "シンプルでも個性出せるお任せ", length: "", payment: "" },
@@ -26,8 +26,14 @@ export const SEED_ORDERS: Order[] = ([
   { customer: "bfigctvejst", type: "ネックレス", design: "黒×星", length: "37", payment: "" },
   { customer: "あやな", type: "ネックレス", design: "ピンク×ゴールド、dm写真", length: "36", payment: "" },
   { customer: "おざき", type: "ネックレス", design: "ターコイズ×星", length: "", payment: "" },
-  { customer: "おざき", type: "ブレスレット", design: "", length: "40", payment: "" },
+  { customer: "おざき", type: "ブレスレット", design: "緑×黄緑×星", length: "40", payment: "" },
   { customer: "莉斗", type: "ネックレス", design: "黒×シルバー", length: "39", payment: "" },
+  { customer: "ひび", type: "ネックレス", design: "黒メイン×シルバー", length: "40", payment: "", memo: "ひびと少ししたデザインkei" },
+  { customer: "ほのか", type: "ネックレス", design: "dm写真あり", length: "", payment: "" },
+  { customer: "ほのか", type: "ブレスレット", design: "dm写真あり", length: "", payment: "" },
+  { customer: "美波", type: "ネックレス", design: "ゴールドメイン×赤", length: "33", payment: "" },
+  { customer: "美波", type: "ネックレス", design: "茶色×ターコイズ×星", length: "36", payment: "" },
+  { customer: "yuut.a", type: "ネックレス", design: "dm写真", length: "40", payment: "" },
 ] as RawOrder[]).map((o, i) => ({
   id: `seed_${BASE + i}`,
   created: BASE + i,
