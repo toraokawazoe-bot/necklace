@@ -121,6 +121,94 @@
   gap: 10px;
 }
 
+.importBtn {
+  font-size: 12px;
+  padding: 5px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.importOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+}
+
+.importModal {
+  background: var(--bg);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.importTitle {
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.importTextarea {
+  width: 100%;
+  height: 200px;
+  padding: 10px;
+  font-size: 12px;
+  font-family: monospace;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text);
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.importError {
+  color: #e53e3e;
+  font-size: 13px;
+  margin: 0;
+}
+
+.importActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.importCancel {
+  padding: 9px 18px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.importConfirm {
+  padding: 9px 18px;
+  background: var(--text);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
 .empty {
   text-align: center;
   padding: 4rem 1rem;
