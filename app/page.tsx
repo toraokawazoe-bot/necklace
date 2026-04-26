@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Order, OrderStatus } from "@/lib/types";
 import { loadOrders, saveOrders, createEmptyOrder } from "@/lib/storage";
+import { SEED_ORDERS } from "@/lib/seedData";
 import OrderCard from "@/components/OrderCard";
 import OrderForm from "@/components/OrderForm";
 import styles from "./page.module.css";
@@ -25,9 +26,7 @@ export default function Home() {
   const [filter, setFilter] = useState<Filter>("all");
   const [editing, setEditing] = useState<Order | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const [importText, setImportText] = useState("");
-  const [importError, setImportError] = useState("");
+  const [seedDone, setSeedDone] = useState(false);
 
   useEffect(() => {
     loadOrders().then((o) => {
@@ -62,22 +61,13 @@ export default function Home() {
     setEditing(null);
   };
 
-  const handleImport = async () => {
-    setImportError("");
-    try {
-      const parsed = JSON.parse(importText);
-      if (!Array.isArray(parsed)) throw new Error("配列である必要があります");
-      const merged = [...orders];
-      for (const item of parsed) {
-        if (!item.id || merged.some((o) => o.id === item.id)) continue;
-        merged.push(item);
-      }
-      await persist(merged);
-      setImporting(false);
-      setImportText("");
-    } catch {
-      setImportError("JSONの形式が正しくありません");
+  const handleSeedImport = async () => {
+    const merged = [...orders];
+    for (const item of SEED_ORDERS) {
+      if (!merged.some((o) => o.id === item.id)) merged.push(item);
     }
+    await persist(merged);
+    setSeedDone(true);
   };
 
   const inboxCount = orders.filter((o) => o.status === "受信トレイ").length;
@@ -99,29 +89,12 @@ export default function Home() {
       <header className={styles.header}>
         <h1 className={styles.title}>オーダー管理</h1>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <button className={styles.importBtn} onClick={() => setImporting(true)}>インポート</button>
+          {!seedDone && orders.length === 0 && (
+            <button className={styles.importBtn} onClick={handleSeedImport}>制作中リストを読み込む</button>
+          )}
           <span className={styles.count}>{orders.length}件</span>
         </div>
       </header>
-
-      {importing && (
-        <div className={styles.importOverlay}>
-          <div className={styles.importModal}>
-            <h2 className={styles.importTitle}>JSONインポート</h2>
-            <textarea
-              className={styles.importTextarea}
-              value={importText}
-              onChange={(e) => setImportText(e.target.value)}
-              placeholder="JSONを貼り付けてください"
-            />
-            {importError && <p className={styles.importError}>{importError}</p>}
-            <div className={styles.importActions}>
-              <button className={styles.importCancel} onClick={() => { setImporting(false); setImportText(""); setImportError(""); }}>キャンセル</button>
-              <button className={styles.importConfirm} onClick={handleImport}>追加する</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className={styles.stats}>
         <div className={styles.statCard}>
