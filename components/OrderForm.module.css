@@ -137,3 +137,84 @@
   font-size: 13px;
   margin-top: 10px;
 }
+
+.screenshotAddBtn {
+  width: 100%;
+  padding: 14px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+}
+
+.screenshotAddBtn:disabled {
+  opacity: 0.6;
+}
+
+.screenshotWrap {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.screenshotThumb {
+  flex: 0 0 96px;
+  height: 96px;
+  padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.screenshotThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.screenshotActions {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.screenshotReplaceBtn,
+.screenshotRemoveBtn {
+  flex: 1;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+}
+
+.screenshotReplaceBtn {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.screenshotRemoveBtn {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+.previewOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.92);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.previewImg {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}

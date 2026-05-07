@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { Order, OrderStatus } from "@/lib/types";
-import { loadOrders, saveOrders, createEmptyOrder } from "@/lib/storage";
+import {
+  subscribeOrders,
+  saveOrder,
+  deleteOrder,
+  mergeSeedOrders,
+  createEmptyOrder,
+} from "@/lib/storage";
 import { SEED_ORDERS } from "@/lib/seedData";
 import OrderCard from "@/components/OrderCard";
 import OrderForm from "@/components/OrderForm";
@@ -28,40 +34,33 @@ export default function Home() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    loadOrders().then(async (o) => {
-      const merged = [...o];
-      for (const item of SEED_ORDERS) {
-        if (!merged.some((x) => x.id === item.id)) merged.push(item);
-      }
-      await saveOrders(merged);
-      setOrders(merged);
-      setLoaded(true);
-    });
-  }, []);
+    let unsubscribe: (() => void) | undefined;
 
-  const persist = async (next: Order[]) => {
-    setOrders(next);
-    await saveOrders(next);
-  };
+    mergeSeedOrders(SEED_ORDERS).then(() => {
+      unsubscribe = subscribeOrders((data) => {
+        setOrders(data);
+        setLoaded(true);
+      });
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, []);
 
   const handleQuickAdd = async () => {
     const newOrder = createEmptyOrder();
-    const next = [...orders, newOrder];
-    await persist(next);
+    await saveOrder(newOrder);
     setEditing(newOrder);
   };
 
   const handleSave = async (order: Order) => {
-    const next = orders.some((o) => o.id === order.id)
-      ? orders.map((o) => (o.id === order.id ? order : o))
-      : [...orders, order];
-    await persist(next);
+    await saveOrder(order);
     setEditing(null);
   };
 
   const handleDelete = async (id: string) => {
-    const next = orders.filter((o) => o.id !== id);
-    await persist(next);
+    await deleteOrder(id);
     setEditing(null);
   };
 

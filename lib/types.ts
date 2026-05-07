@@ -21,6 +21,7 @@ export interface Order {
   payment: PaymentMethod;
   status: OrderStatus;
   memo: string;
+  screenshot?: string;
 }
 
 export const STATUS_LIST: OrderStatus[] = [

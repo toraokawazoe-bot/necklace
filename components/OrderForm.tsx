@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Order, ItemType, PaymentMethod, OrderStatus, STATUS_LIST } from "@/lib/types";
 import { formatDate } from "@/lib/storage";
+import { compressImage } from "@/lib/image";
 import styles from "./OrderForm.module.css";
 
 interface Props {
@@ -20,6 +21,10 @@ export default function OrderForm({ order, onSave, onDelete, onClose }: Props) {
   const [payment, setPayment] = useState<PaymentMethod>(order.payment);
   const [status, setStatus] = useState<OrderStatus>(order.status);
   const [memo, setMemo] = useState(order.memo);
+  const [screenshot, setScreenshot] = useState<string | undefined>(order.screenshot);
+  const [uploading, setUploading] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -28,8 +33,27 @@ export default function OrderForm({ order, onSave, onDelete, onClose }: Props) {
     };
   }, []);
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    try {
+      const compressed = await compressImage(file);
+      setScreenshot(compressed);
+    } catch {
+      alert("画像の読み込みに失敗しました");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveScreenshot = () => {
+    setScreenshot(undefined);
+  };
+
   const handleSave = () => {
-    onSave({
+    const next: Order = {
       ...order,
       customer: customer.trim(),
       type,
@@ -38,7 +62,13 @@ export default function OrderForm({ order, onSave, onDelete, onClose }: Props) {
       payment,
       status,
       memo: memo.trim(),
-    });
+    };
+    if (screenshot) {
+      next.screenshot = screenshot;
+    } else {
+      delete next.screenshot;
+    }
+    onSave(next);
   };
 
   const handleDelete = () => {
@@ -66,6 +96,56 @@ export default function OrderForm({ order, onSave, onDelete, onClose }: Props) {
             onChange={(e) => setCustomer(e.target.value)}
             autoComplete="off"
           />
+        </div>
+
+        <div className={styles.field}>
+          <label className={styles.label}>DMスクショ</label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            style={{ display: "none" }}
+          />
+          {screenshot ? (
+            <div className={styles.screenshotWrap}>
+              <button
+                type="button"
+                className={styles.screenshotThumb}
+                onClick={() => setPreviewOpen(true)}
+                aria-label="スクショを拡大"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={screenshot} alt="DMスクショ" />
+              </button>
+              <div className={styles.screenshotActions}>
+                <button
+                  type="button"
+                  className={styles.screenshotReplaceBtn}
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  {uploading ? "処理中…" : "差し替え"}
+                </button>
+                <button
+                  type="button"
+                  className={styles.screenshotRemoveBtn}
+                  onClick={handleRemoveScreenshot}
+                >
+                  削除
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className={styles.screenshotAddBtn}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading ? "処理中…" : "📷 画像を選択"}
+            </button>
+          )}
         </div>
 
         <div className={styles.field}>
@@ -146,6 +226,19 @@ export default function OrderForm({ order, onSave, onDelete, onClose }: Props) {
         </div>
         <button className={styles.deleteBtn} onClick={handleDelete}>このオーダーを削除</button>
       </div>
+
+      {previewOpen && screenshot && (
+        <div
+          className={styles.previewOverlay}
+          onClick={(e) => {
+            e.stopPropagation();
+            setPreviewOpen(false);
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={screenshot} alt="DMスクショ拡大" className={styles.previewImg} />
+        </div>
+      )}
     </div>
   );
 }
