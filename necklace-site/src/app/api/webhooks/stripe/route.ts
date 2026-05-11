@@ -10,6 +10,7 @@ import {
   type OrderEmailData,
   type OrderItem,
 } from "@/lib/email";
+import { recordOrder, type StoredOrder } from "@/lib/orders";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -130,7 +131,31 @@ async function handlePaid(session: Stripe.Checkout.Session) {
     paymentMethodSummary: paymentMethod,
   };
 
-  const tasks: Promise<unknown>[] = [];
+  const shippingSummary = (() => {
+    if (!shipping) return null;
+    const parts = [
+      shipping.postal_code ? `〒${shipping.postal_code}` : null,
+      [shipping.state, shipping.city].filter(Boolean).join(""),
+      shipping.line1,
+      shipping.line2,
+    ].filter(Boolean);
+    return parts.length ? parts.join(" ") : null;
+  })();
+
+  const stored: StoredOrder = {
+    sessionId: session.id,
+    status: "paid",
+    createdAt: Date.now(),
+    amountTotal: session.amount_total ?? 0,
+    currency: session.currency ?? "jpy",
+    email: customerEmail || null,
+    customerName,
+    items,
+    paymentMethod,
+    shippingSummary,
+  };
+
+  const tasks: Promise<unknown>[] = [recordOrder(stored)];
   if (customerEmail) {
     tasks.push(sendOrderConfirmationToCustomer(data));
   }
@@ -145,7 +170,20 @@ async function handleFailure(
   const customerEmail =
     session.customer_details?.email ?? session.customer_email ?? null;
 
-  const tasks: Promise<unknown>[] = [];
+  const stored: StoredOrder = {
+    sessionId: session.id,
+    status: reason,
+    createdAt: Date.now(),
+    amountTotal: session.amount_total ?? 0,
+    currency: session.currency ?? "jpy",
+    email: customerEmail,
+    customerName: session.customer_details?.name ?? null,
+    items: [],
+    paymentMethod: null,
+    shippingSummary: null,
+  };
+
+  const tasks: Promise<unknown>[] = [recordOrder(stored)];
   if (customerEmail) {
     tasks.push(sendPaymentIssueToCustomer(customerEmail, reason, session.id));
   }
