@@ -208,6 +208,24 @@ export const products: Product[] = [
     details: baseDetails,
     inStock: true,
   },
+  {
+    id: "p_test_50",
+    slug: "test-50",
+    name: "テスト商品",
+    subtitle: "Test item for checkout verification",
+    description:
+      "決済フロー確認用のテスト商品です。実際の発送はありません。",
+    price: 50,
+    currency: "JPY",
+    category: "necklace",
+    material: "テスト用",
+    length: "—",
+    image: "/products/brown.jpg",
+    imageAlt: "テスト商品",
+    imageBg: BG,
+    details: ["決済テスト用 / 発送なし"],
+    inStock: true,
+  },
 ];
 
 export function getProductBySlug(slug: string): Product | undefined {
