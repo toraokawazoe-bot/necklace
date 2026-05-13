@@ -79,6 +79,7 @@ export async function POST(req: Request) {
   try {
     const stripe = getStripe();
     const summary = summaryParts.join(",").slice(0, 480);
+    const customer = await stripe.customers.create();
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: lineItems,
@@ -94,7 +95,12 @@ export async function POST(req: Request) {
           },
         },
       },
-      customer_creation: "always",
+      customer: customer.id,
+      customer_update: {
+        address: "auto",
+        name: "auto",
+        shipping: "auto",
+      },
       shipping_address_collection: {
         allowed_countries: ["JP"],
       },
