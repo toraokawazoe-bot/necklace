@@ -324,6 +324,10 @@ function StatusBadge({ status }: { status: StoredOrder["status"] }) {
       label: "決済済",
       cls: "border-emerald-700/40 bg-emerald-700/10 text-emerald-800",
     },
+    refunded: {
+      label: "返金済",
+      cls: "border-amber-700/40 bg-amber-700/10 text-amber-800",
+    },
     failed: {
       label: "失敗",
       cls: "border-[var(--accent-red)]/40 bg-[var(--accent-red)]/10 text-[var(--accent-red)]",

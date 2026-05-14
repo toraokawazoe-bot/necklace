@@ -16,7 +16,7 @@ const NS = "740nll:orders";
 const RECENT_KEY = `${NS}:recent`;
 const RECENT_LIMIT = 200;
 
-export type OrderStatus = "paid" | "failed" | "expired";
+export type OrderStatus = "paid" | "failed" | "expired" | "refunded";
 
 export type StoredOrderItem = {
   name: string;
