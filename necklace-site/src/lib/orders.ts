@@ -78,6 +78,9 @@ export type OrderStats = {
 };
 
 function parseOrder(raw: unknown): StoredOrder | null {
+  if (raw && typeof raw === "object") {
+    return raw as StoredOrder;
+  }
   if (typeof raw !== "string") return null;
   try {
     return JSON.parse(raw) as StoredOrder;
