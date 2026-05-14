@@ -21,7 +21,29 @@ export async function GET(req: Request) {
     );
   }
 
-  const sessionId = `cs_test_synthetic_${Date.now()}`;
+  const stripeReal = new Stripe(process.env.STRIPE_SECRET_KEY ?? "", {
+    typescript: true,
+  });
+  const realSession = await stripeReal.checkout.sessions.create({
+    mode: "payment",
+    line_items: [
+      {
+        quantity: 1,
+        price_data: {
+          currency: "jpy",
+          unit_amount: 50,
+          product_data: {
+            name: "テスト商品 (synthetic end-to-end)",
+          },
+        },
+      },
+    ],
+    payment_method_types: ["card"],
+    success_url: "https://necklace-site.vercel.app/checkout/success",
+    cancel_url: "https://necklace-site.vercel.app/checkout/cancel",
+    customer_email: "synthetic-webhook-test@example.com",
+  });
+  const sessionId = realSession.id;
   const eventPayload = {
     id: `evt_test_synthetic_${Date.now()}`,
     object: "event",
