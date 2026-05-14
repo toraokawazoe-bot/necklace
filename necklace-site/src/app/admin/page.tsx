@@ -270,15 +270,34 @@ function OrdersTable({ orders }: { orders: StoredOrder[] }) {
                 {o.items.length === 0 ? (
                   <span className="text-xs text-muted-foreground">—</span>
                 ) : (
-                  <ul className="space-y-0.5">
-                    {o.items.map((it, i) => (
-                      <li key={i} className="text-xs">
-                        <span>{it.name}</span>
-                        {it.qty > 1 ? (
-                          <span className="text-muted-foreground"> × {it.qty}</span>
-                        ) : null}
-                      </li>
-                    ))}
+                  <ul className="space-y-1.5">
+                    {o.items.map((it, i) => {
+                      const parsed = parseItemName(it.name);
+                      return (
+                        <li key={i} className="leading-tight">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-sm font-medium">
+                              {parsed.name}
+                            </span>
+                            {parsed.size ? (
+                              <span className="rounded-full border border-border bg-muted/60 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                                {parsed.size}
+                              </span>
+                            ) : null}
+                            {it.qty > 1 ? (
+                              <span className="text-xs text-muted-foreground">
+                                × {it.qty}
+                              </span>
+                            ) : null}
+                          </div>
+                          {parsed.subtitle ? (
+                            <div className="text-[11px] text-muted-foreground">
+                              {parsed.subtitle}
+                            </div>
+                          ) : null}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </td>
@@ -322,6 +341,20 @@ function StatusBadge({ status }: { status: StoredOrder["status"] }) {
       {meta.label}
     </span>
   );
+}
+
+function parseItemName(raw: string): {
+  name: string;
+  subtitle: string | null;
+  size: string | null;
+} {
+  const sizeMatch = raw.match(/(\d{2})\s*cm/);
+  const size = sizeMatch ? `${sizeMatch[1]}cm` : null;
+  const withoutSize = size ? raw.replace(/[・·]?\s*\d{2}\s*cm.*$/, "").trim() : raw;
+  const dashSplit = withoutSize.split(/\s+—\s+|\s+-\s+/);
+  const name = dashSplit[0]?.trim() ?? withoutSize;
+  const subtitle = dashSplit.slice(1).join(" — ").trim() || null;
+  return { name, subtitle, size };
 }
 
 function formatDate(ms: number): string {
