@@ -2,7 +2,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/admin-session";
 import { readSnapshot, type AnalyticsSnapshot } from "@/lib/analytics";
-import { readOrderStats, type StoredOrder } from "@/lib/orders";
+import {
+  carrierLabel,
+  readOrderStats,
+  trackingUrl,
+  type StoredOrder,
+} from "@/lib/orders";
+import { ShipControls } from "@/components/admin/ShipControls";
 import { formatJPY } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -244,6 +250,7 @@ function OrdersTable({ orders }: { orders: StoredOrder[] }) {
             <th className="px-4 py-3 text-right font-medium">金額</th>
             <th className="px-4 py-3 text-left font-medium">配送先</th>
             <th className="px-4 py-3 text-left font-medium">支払</th>
+            <th className="px-4 py-3 text-left font-medium">発送</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -309,6 +316,20 @@ function OrdersTable({ orders }: { orders: StoredOrder[] }) {
               </td>
               <td className="px-4 py-3 align-top text-xs">
                 {o.paymentMethod ?? <span className="text-muted-foreground">—</span>}
+              </td>
+              <td className="px-4 py-3 align-top">
+                {o.status === "paid" ? (
+                  <ShipControls
+                    sessionId={o.sessionId}
+                    shipped={Boolean(o.shippedAt)}
+                    shippedAt={o.shippedAt}
+                    carrierLabel={carrierLabel(o.carrier)}
+                    trackingNumber={o.trackingNumber}
+                    trackingUrl={trackingUrl(o.carrier, o.trackingNumber)}
+                  />
+                ) : (
+                  <span className="text-xs text-muted-foreground">—</span>
+                )}
               </td>
             </tr>
           ))}

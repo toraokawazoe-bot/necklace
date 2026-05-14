@@ -24,6 +24,15 @@ export type StoredOrderItem = {
   amountTotal: number;
 };
 
+export type Carrier =
+  | "japanpost_clickpost"
+  | "japanpost_yupacket"
+  | "japanpost_yupack"
+  | "japanpost_letter"
+  | "yamato"
+  | "sagawa"
+  | "other";
+
 export type StoredOrder = {
   sessionId: string;
   status: OrderStatus;
@@ -35,7 +44,52 @@ export type StoredOrder = {
   items: StoredOrderItem[];
   paymentMethod: string | null;
   shippingSummary: string | null;
+  shippedAt?: number;
+  carrier?: Carrier;
+  trackingNumber?: string;
 };
+
+export function trackingUrl(
+  carrier: Carrier | undefined,
+  trackingNumber: string | undefined,
+): string | null {
+  if (!trackingNumber) return null;
+  const tn = encodeURIComponent(trackingNumber);
+  switch (carrier) {
+    case "japanpost_clickpost":
+    case "japanpost_yupacket":
+    case "japanpost_yupack":
+    case "japanpost_letter":
+      return `https://trackings.post.japanpost.jp/services/srv/search/direct?reqCodeNo1=${tn}&locale=ja`;
+    case "yamato":
+      return `https://toi.kuronekoyamato.co.jp/cgi-bin/tneko?number01=${tn}`;
+    case "sagawa":
+      return `https://k2k.sagawa-exp.co.jp/p/web/okurijostate?okurijoNo=${tn}`;
+    default:
+      return null;
+  }
+}
+
+export function carrierLabel(carrier: Carrier | undefined): string {
+  switch (carrier) {
+    case "japanpost_clickpost":
+      return "クリックポスト";
+    case "japanpost_yupacket":
+      return "ゆうパケット";
+    case "japanpost_yupack":
+      return "ゆうパック";
+    case "japanpost_letter":
+      return "定形外郵便";
+    case "yamato":
+      return "ヤマト運輸";
+    case "sagawa":
+      return "佐川急便";
+    case "other":
+      return "その他";
+    default:
+      return "—";
+  }
+}
 
 export async function recordOrder(order: StoredOrder): Promise<void> {
   const redis = getRedis();
@@ -87,6 +141,29 @@ function parseOrder(raw: unknown): StoredOrder | null {
   } catch {
     return null;
   }
+}
+
+export async function markOrderShipped(input: {
+  sessionId: string;
+  carrier?: Carrier;
+  trackingNumber?: string;
+}): Promise<StoredOrder | null> {
+  const redis = getRedis();
+  if (!redis) return null;
+  const raw = await redis.lrange(RECENT_KEY, 0, -1);
+  for (let i = 0; i < raw.length; i++) {
+    const order = parseOrder(raw[i]);
+    if (!order || order.sessionId !== input.sessionId) continue;
+    const updated: StoredOrder = {
+      ...order,
+      shippedAt: Date.now(),
+      carrier: input.carrier ?? order.carrier,
+      trackingNumber: input.trackingNumber ?? order.trackingNumber,
+    };
+    await redis.lset(RECENT_KEY, i, JSON.stringify(updated));
+    return updated;
+  }
+  return null;
 }
 
 export async function readOrderStats(limit = 30): Promise<OrderStats> {

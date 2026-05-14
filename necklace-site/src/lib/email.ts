@@ -183,6 +183,71 @@ export async function sendPaymentIssueToOwner(
   }
 }
 
+export type ShipmentEmailData = {
+  email: string;
+  customerName?: string | null;
+  sessionId: string;
+  items: OrderItem[];
+  shipping?: OrderEmailData["shipping"];
+  carrierLabel: string;
+  trackingNumber?: string | null;
+  trackingUrl?: string | null;
+};
+
+export async function sendShipmentNotificationToCustomer(
+  data: ShipmentEmailData,
+): Promise<void> {
+  const resend = getResend();
+  if (!resend) {
+    console.warn(
+      "[email] RESEND_API_KEY not set — skipping shipment notification",
+    );
+    return;
+  }
+
+  const trackingLines = data.trackingNumber
+    ? [
+        `配送方法　${data.carrierLabel}`,
+        `追跡番号　${data.trackingNumber}`,
+        data.trackingUrl ? `追跡 URL　${data.trackingUrl}` : null,
+      ].filter(Boolean) as string[]
+    : [`配送方法　${data.carrierLabel}`, `(追跡番号なしの便のため追跡できません)`];
+
+  const text = [
+    `${data.customerName ?? "お客様"} 様`,
+    ``,
+    `ご注文の商品を本日発送いたしました。`,
+    `お受け取りまで今しばらくお待ちください。`,
+    ``,
+    `── 発送内容 ──`,
+    formatItemsPlain(data.items),
+    ``,
+    ...trackingLines,
+    `お届け先　${formatShippingPlain(data.shipping ?? null)}`,
+    ``,
+    `通常 1〜4 日程度でお手元に届きます(地域により前後します)。`,
+    `万が一届かない、商品に不備があるなどございましたら、`,
+    `このメールにご返信いただくか Instagram (@740nll) の DM までご連絡ください。`,
+    ``,
+    `──`,
+    `740NLL`,
+    `https://necklace-site.vercel.app`,
+    ``,
+    `注文 ID: ${data.sessionId}`,
+  ].join("\n");
+
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: [data.email],
+      subject: "【740NLL】発送のお知らせ",
+      text,
+    });
+  } catch (e) {
+    console.error("[email] shipment notification failed:", e);
+  }
+}
+
 export async function sendOrderNotificationToOwner(
   data: OrderEmailData,
 ): Promise<void> {
