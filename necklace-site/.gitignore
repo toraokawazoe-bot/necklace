@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+.env*.local
+
+# separate repository
+/uniform_EC/
