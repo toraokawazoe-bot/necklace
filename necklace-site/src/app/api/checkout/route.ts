@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { getProductById } from "@/lib/products";
+import { checkoutLimiter, enforce, getClientIp } from "@/lib/ratelimit";
 
 type CheckoutRequest = {
   lines: { productId: string; size: number; qty: number }[];
@@ -9,6 +10,15 @@ type CheckoutRequest = {
 const ALLOWED_SIZES = new Set([36, 38, 40, 41, 42, 44]);
 
 export async function POST(req: Request) {
+  const rl = await enforce(checkoutLimiter(), getClientIp(req));
+  if (!rl.ok) {
+    return NextResponse.json(
+      {
+        error: "リクエストが多すぎます。しばらく待ってから再度お試しください。",
+      },
+      { status: 429 },
+    );
+  }
   let body: CheckoutRequest;
   try {
     body = (await req.json()) as CheckoutRequest;
@@ -40,7 +50,7 @@ export async function POST(req: Request) {
   const summaryParts: string[] = [];
 
   for (const line of body.lines) {
-    const product = getProductById(line.productId);
+    const product = await getProductById(line.productId);
     if (!product) {
       return NextResponse.json(
         { error: `商品が見つかりません: ${line.productId}` },
@@ -83,18 +93,7 @@ export async function POST(req: Request) {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: lineItems,
-      payment_method_types: ["card", "konbini", "customer_balance"],
-      payment_method_options: {
-        konbini: {
-          expires_after_days: 3,
-        },
-        customer_balance: {
-          funding_type: "bank_transfer",
-          bank_transfer: {
-            type: "jp_bank_transfer",
-          },
-        },
-      },
+      payment_method_types: ["card"],
       customer: customer.id,
       customer_update: {
         address: "auto",
