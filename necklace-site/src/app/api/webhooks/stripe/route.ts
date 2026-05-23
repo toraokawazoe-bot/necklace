@@ -116,6 +116,7 @@ async function handlePaid(session: Stripe.Checkout.Session) {
     const types = session.payment_method_types ?? [];
     if (types.includes("customer_balance")) return "銀行振込";
     if (types.includes("konbini")) return "コンビニ払い";
+    if (types.includes("paypay")) return "PayPay";
     if (types.includes("card")) return "クレジットカード";
     return types.join(" / ");
   })();

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { getProductById } from "@/lib/products";
 import { checkoutLimiter, enforce, getClientIp } from "@/lib/ratelimit";
@@ -93,7 +94,7 @@ export async function POST(req: Request) {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: lineItems,
-      payment_method_types: ["card"],
+      payment_method_types: ["card", "paypay"] as Stripe.Checkout.SessionCreateParams["payment_method_types"],
       customer: customer.id,
       customer_update: {
         address: "auto",
