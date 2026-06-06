@@ -114,3 +114,19 @@
   color: var(--inbox);
   font-weight: 500;
 }
+
+.price {
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+.card.overdue {
+  border-color: var(--danger);
+  box-shadow: inset 3px 0 0 var(--danger);
+}
+
+.reminder {
+  color: var(--danger);
+  font-weight: 500;
+}

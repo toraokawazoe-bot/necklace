@@ -1,19 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Order, ItemType, PaymentMethod, OrderStatus, STATUS_LIST } from "@/lib/types";
+import { Order, ItemType, PaymentMethod, OrderStatus, Settings, STATUS_LIST } from "@/lib/types";
 import { formatDate } from "@/lib/storage";
 import { compressImage } from "@/lib/image";
+import { defaultPrice, formatYen } from "@/lib/pricing";
 import styles from "./OrderForm.module.css";
 
 interface Props {
   order: Order;
+  settings: Settings;
   onSave: (order: Order) => void;
   onDelete: (id: string) => void;
   onClose: () => void;
 }
 
-export default function OrderForm({ order, onSave, onDelete, onClose }: Props) {
+export default function OrderForm({ order, settings, onSave, onDelete, onClose }: Props) {
   const [customer, setCustomer] = useState(order.customer);
   const [type, setType] = useState<ItemType>(order.type);
   const [length, setLength] = useState(order.length);
@@ -21,6 +23,9 @@ export default function OrderForm({ order, onSave, onDelete, onClose }: Props) {
   const [payment, setPayment] = useState<PaymentMethod>(order.payment);
   const [status, setStatus] = useState<OrderStatus>(order.status);
   const [memo, setMemo] = useState(order.memo);
+  const [priceInput, setPriceInput] = useState<string>(
+    typeof order.priceOverride === "number" ? String(order.priceOverride) : ""
+  );
   const [screenshot, setScreenshot] = useState<string | undefined>(order.screenshot);
   const [uploading, setUploading] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -67,6 +72,13 @@ export default function OrderForm({ order, onSave, onDelete, onClose }: Props) {
       next.screenshot = screenshot;
     } else {
       delete next.screenshot;
+    }
+    const priceTrim = priceInput.trim();
+    if (priceTrim === "") {
+      delete next.priceOverride;
+    } else {
+      const parsed = Number(priceTrim);
+      if (!Number.isNaN(parsed)) next.priceOverride = parsed;
     }
     onSave(next);
   };
@@ -177,6 +189,48 @@ export default function OrderForm({ order, onSave, onDelete, onClose }: Props) {
             onChange={(e) => setLength(e.target.value)}
             inputMode="numeric"
           />
+        </div>
+
+        <div className={styles.field}>
+          <label className={styles.label}>金額 (円)</label>
+          <input
+            type="number"
+            placeholder={
+              defaultPrice(settings, order.created, type) !== undefined
+                ? String(defaultPrice(settings, order.created, type))
+                : "デフォルト未設定"
+            }
+            value={priceInput}
+            onChange={(e) => setPriceInput(e.target.value)}
+            inputMode="numeric"
+          />
+          {(() => {
+            const dp = defaultPrice(settings, order.created, type);
+            const using =
+              priceInput.trim() === "" && dp !== undefined ? dp : undefined;
+            if (priceInput.trim() === "" && dp === undefined) {
+              return (
+                <div className={styles.hint}>
+                  受注月のデフォルト未設定。空欄なら売上集計に金額0として加算されます
+                </div>
+              );
+            }
+            if (using !== undefined) {
+              return (
+                <div className={styles.hint}>
+                  デフォルト適用：{formatYen(using)}
+                </div>
+              );
+            }
+            if (dp !== undefined) {
+              return (
+                <div className={styles.hint}>
+                  この金額で上書き（デフォルト：{formatYen(dp)}）
+                </div>
+              );
+            }
+            return null;
+          })()}
         </div>
 
         <div className={styles.field}>

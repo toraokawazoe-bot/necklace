@@ -22,6 +22,10 @@ export interface Order {
   status: OrderStatus;
   memo: string;
   screenshot?: string;
+  // 個別の金額上書き（未入力なら受注月のデフォルト価格を使用）
+  priceOverride?: number;
+  // status === "完了" になったタイミング。着金日として扱う
+  completedAt?: number;
 }
 
 export const STATUS_LIST: OrderStatus[] = [
@@ -33,3 +37,17 @@ export const STATUS_LIST: OrderStatus[] = [
   "完了",
   "失注",
 ];
+
+export interface MonthlyPrice {
+  necklace?: number;
+  bracelet?: number;
+}
+
+export interface Settings {
+  // キーは "YYYY-MM"（例：2026-04）
+  monthlyPrices: Record<string, MonthlyPrice>;
+}
+
+export const EMPTY_SETTINGS: Settings = {
+  monthlyPrices: {},
+};

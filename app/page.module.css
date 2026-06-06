@@ -28,6 +28,145 @@
   letter-spacing: 0.05em;
 }
 
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settingsBtn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  padding: 0;
+  cursor: pointer;
+}
+
+.salesCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.salesNav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.salesNav .salesHead {
+  flex: 1;
+  min-width: 0;
+}
+
+.navBtn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  width: 30px;
+  height: 30px;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-family: inherit;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.navBtn:active {
+  background: var(--bg-secondary);
+}
+
+.navBtn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.salesHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.salesTitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+
+.salesMonth {
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.05em;
+}
+
+.salesGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.salesLabel {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.salesValue {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.salesPaid {
+  color: var(--accent);
+}
+
+.salesSub {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+  letter-spacing: 0.03em;
+}
+
+.salesMeta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.03em;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.overdueChip {
+  margin-left: auto;
+  color: var(--danger);
+  font-weight: 500;
+}
+
 .stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -215,4 +354,33 @@
   color: var(--text-tertiary);
   font-size: 14px;
   line-height: 1.8;
+}
+
+.migrationNotice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+.migrationNotice span {
+  flex: 1;
+}
+
+.migrationNotice button {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 18px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  line-height: 1;
 }

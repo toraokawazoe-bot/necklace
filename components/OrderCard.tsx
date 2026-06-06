@@ -1,11 +1,14 @@
 "use client";
 
-import { Order } from "@/lib/types";
+import { Order, Settings } from "@/lib/types";
 import { formatDate } from "@/lib/storage";
+import { effectivePrice, elapsedDays, formatYen, isOverdue } from "@/lib/pricing";
 import styles from "./OrderCard.module.css";
 
 interface Props {
   order: Order;
+  settings: Settings;
+  avgDays: number | null;
   onClick: () => void;
 }
 
@@ -19,16 +22,18 @@ const statusClass: Record<string, string> = {
   "失注": styles.sLost,
 };
 
-export default function OrderCard({ order, onClick }: Props) {
+export default function OrderCard({ order, settings, avgDays, onClick }: Props) {
   const isInbox = order.status === "受信トレイ";
+  const overdue = isOverdue(order, avgDays);
   const designDisplay =
     order.design && order.design.length > 32
       ? order.design.slice(0, 32) + "…"
       : order.design;
+  const price = effectivePrice(settings, order);
 
   return (
     <button
-      className={`${styles.card} ${isInbox ? styles.inbox : ""}`}
+      className={`${styles.card} ${isInbox ? styles.inbox : ""} ${overdue ? styles.overdue : ""}`}
       onClick={onClick}
     >
       <div className={styles.topRow}>
@@ -57,9 +62,17 @@ export default function OrderCard({ order, onClick }: Props) {
 
       <div className={styles.bottomRow}>
         {order.length && <span>{order.length}cm</span>}
+        {price !== undefined && (
+          <span className={styles.price}>{formatYen(price)}</span>
+        )}
         {order.payment && <span>{order.payment}</span>}
         <span>📅 {formatDate(order.created)}</span>
         {isInbox && <span className={styles.urgent}>要対応</span>}
+        {overdue && (
+          <span className={styles.reminder}>
+            ⏰ {elapsedDays(order)}日経過
+          </span>
+        )}
       </div>
     </button>
   );
