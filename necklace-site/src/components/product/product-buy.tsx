@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { SizeGuide } from "@/components/product/size-guide";
 import { useCart } from "@/lib/cart-store";
 import { cn } from "@/lib/utils";
 
 const SIZE_OPTIONS = [
-  { cm: 38, label: "レディース標準", note: "Tシャツの首元にちょうど" },
-  { cm: 41, label: "メンズ標準", note: "鎖骨ライン・ゆとりめ" },
+  { cm: 38, label: "首元にフィット", note: "Tシャツの襟ぐりと同じ高さ・女性に多いサイズ" },
+  { cm: 41, label: "鎖骨ライン", note: "ゆったり下がる・男性に多いサイズ" },
 ];
 
 export function ProductBuy({
@@ -31,12 +32,15 @@ export function ProductBuy({
   return (
     <div>
       <div>
-        <p
-          className="font-marker text-[20px] leading-none md:text-[22px]"
-          style={{ color: "var(--bead-olive)" }}
-        >
-          サイズを選ぶ
-        </p>
+        <div className="flex items-baseline justify-between gap-3">
+          <p
+            className="font-marker text-[20px] leading-none md:text-[22px]"
+            style={{ color: "var(--bead-olive)" }}
+          >
+            サイズを選ぶ
+          </p>
+          <SizeGuide />
+        </div>
         <div className="mt-3 grid grid-cols-2 gap-2.5">
           {SIZE_OPTIONS.map((s) => {
             const active = size === s.cm;

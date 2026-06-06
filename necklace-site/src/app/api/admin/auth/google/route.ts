@@ -5,8 +5,16 @@ import {
   buildRedirectUri,
   getGoogleConfig,
 } from "@/lib/google-oauth";
+import { adminAuthLimiter, enforce, getClientIp } from "@/lib/ratelimit";
 
 export async function GET(request: Request) {
+  const rl = await enforce(adminAuthLimiter(), getClientIp(request));
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Too many login attempts. Please wait." },
+      { status: 429 },
+    );
+  }
   const config = getGoogleConfig();
   if (!config) {
     return NextResponse.json(

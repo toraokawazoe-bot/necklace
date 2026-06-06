@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
-import { products } from "@/lib/products";
+import { listAllProductsWithInventory } from "@/lib/products";
 import { ProductCard } from "@/components/product/product-card";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "Shop",
   description: "すべてのネックレス",
 };
 
-export default function ProductsPage() {
+export default async function ProductsPage() {
+  const products = await listAllProductsWithInventory();
   return (
     <div className="mx-auto max-w-[1400px] px-6 py-16 md:px-10 md:py-24">
       <header className="mb-16 max-w-3xl md:mb-24">

@@ -77,7 +77,11 @@ export async function getAdminSession(): Promise<Session | null> {
 }
 
 export function isAllowedAdminEmail(email: string): boolean {
-  const allow = (process.env.ADMIN_EMAIL ?? "").trim().toLowerCase();
-  if (!allow) return false;
-  return email.trim().toLowerCase() === allow;
+  const raw = process.env.ADMIN_EMAIL ?? "";
+  const allowed = raw
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  if (allowed.length === 0) return false;
+  return allowed.includes(email.trim().toLowerCase());
 }

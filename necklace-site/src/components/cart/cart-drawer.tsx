@@ -5,18 +5,25 @@ import Image from "next/image";
 import Link from "next/link";
 import { X, Plus, Minus } from "lucide-react";
 import { useCart } from "@/lib/cart-store";
-import { products } from "@/lib/products";
+import type { Product } from "@/lib/products";
 import { Button } from "@/components/ui/button";
 import { formatJPY } from "@/lib/utils";
 
 export function CartDrawer() {
   const { lines, isOpen, close, setQty, remove, hydrated } = useCart();
   const [mounted, setMounted] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
+    fetch("/api/products")
+      .then((res) => res.json())
+      .then((data: { products?: Product[] }) => {
+        if (Array.isArray(data.products)) setProducts(data.products);
+      })
+      .catch((e) => console.error("[cart] product fetch failed:", e));
   }, []);
 
   useEffect(() => {
@@ -41,8 +48,7 @@ export function CartDrawer() {
       return { line, product };
     })
     .filter(
-      (x): x is { line: typeof lines[number]; product: typeof products[number] } =>
-        x !== null,
+      (x): x is { line: typeof lines[number]; product: Product } => x !== null,
     );
 
   const subtotal = cartItems.reduce(

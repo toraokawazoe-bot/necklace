@@ -46,6 +46,7 @@ const crayon = localFont({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.740nll.store"),
   title: {
     default: "740NLL — Handmade beaded chokers",
     template: "%s · 740NLL",

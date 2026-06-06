@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/admin-session";
+import { InAppBrowserWarning } from "@/components/admin/InAppBrowserWarning";
 
 const ERROR_MESSAGES: Record<string, string> = {
   not_allowed: "このGoogleアカウントではログインできません。",
@@ -40,6 +41,8 @@ export default async function AdminLoginPage({
             {errorMessage}
           </div>
         ) : null}
+
+        <InAppBrowserWarning />
 
         <Link
           href="/api/admin/auth/google"

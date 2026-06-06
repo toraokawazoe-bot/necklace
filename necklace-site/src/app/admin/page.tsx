@@ -24,16 +24,26 @@ export default async function AdminDashboard() {
   ]);
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10">
-      <header className="flex items-center justify-between">
+    <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
             740NLL
           </p>
-          <h1 className="mt-1 text-3xl font-serif tracking-tight">Admin · Analytics</h1>
+          <h1 className="mt-1 text-2xl sm:text-3xl font-serif tracking-tight">
+            Admin · Analytics
+          </h1>
         </div>
-        <div className="flex items-center gap-4 text-sm">
-          <span className="text-muted-foreground">{session.email}</span>
+        <div className="flex flex-wrap items-center gap-3 text-sm sm:gap-4">
+          <Link
+            href="/admin/products"
+            className="rounded-full border border-border px-4 py-1.5 text-sm transition hover:bg-foreground hover:text-background"
+          >
+            商品管理
+          </Link>
+          <span className="min-w-0 max-w-full truncate text-muted-foreground">
+            {session.email}
+          </span>
           <form action="/api/admin/auth/logout" method="post">
             <button
               type="submit"
@@ -164,7 +174,7 @@ export default async function AdminDashboard() {
         </Panel>
       </section>
 
-      <footer className="mt-16 flex justify-between text-xs text-muted-foreground">
+      <footer className="mt-16 flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
         <Link href="/" className="hover:underline">
           ← サイトへ戻る
         </Link>
@@ -187,7 +197,7 @@ function Stat({
 }) {
   return (
     <div
-      className={`rounded-xl border p-5 ${
+      className={`rounded-xl border p-4 sm:p-5 ${
         accent
           ? "border-foreground bg-foreground text-background"
           : "border-border bg-white/60"
@@ -200,7 +210,7 @@ function Stat({
       >
         {label}
       </p>
-      <p className="mt-2 font-serif text-3xl tracking-tight">
+      <p className="mt-2 break-words font-serif text-2xl tracking-tight sm:text-3xl">
         {typeof value === "number" ? value.toLocaleString() : value}
       </p>
       {sub ? (
@@ -239,8 +249,79 @@ function OrdersTable({ orders }: { orders: StoredOrder[] }) {
     );
   }
   return (
-    <div className="mt-4 overflow-hidden rounded-xl border border-border bg-white/60">
-      <table className="w-full text-sm">
+    <>
+      {/* モバイル: カード表示 */}
+      <ul className="mt-4 space-y-3 md:hidden">
+        {orders.map((o) => (
+          <li
+            key={o.sessionId}
+            className="rounded-xl border border-border bg-white/60 p-4"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-xs text-muted-foreground">
+                {formatDate(o.createdAt)}
+              </span>
+              <StatusBadge status={o.status} />
+            </div>
+
+            {(o.customerName || o.email) && (
+              <div className="mt-2 min-w-0">
+                {o.customerName ? (
+                  <div className="text-sm font-medium">{o.customerName}</div>
+                ) : null}
+                {o.email ? (
+                  <div className="truncate text-xs text-muted-foreground">
+                    {o.email}
+                  </div>
+                ) : null}
+              </div>
+            )}
+
+            <div className="mt-2 flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <OrderItems items={o.items} />
+              </div>
+              <span className="whitespace-nowrap text-sm font-medium tabular-nums">
+                {o.amountTotal > 0 ? formatJPY(o.amountTotal) : "—"}
+              </span>
+            </div>
+
+            {(o.shippingSummary || o.paymentMethod) && (
+              <dl className="mt-3 space-y-1 border-t border-border pt-3 text-xs">
+                {o.shippingSummary ? (
+                  <div className="flex gap-2">
+                    <dt className="shrink-0 text-muted-foreground">配送先</dt>
+                    <dd className="min-w-0 break-words">{o.shippingSummary}</dd>
+                  </div>
+                ) : null}
+                {o.paymentMethod ? (
+                  <div className="flex gap-2">
+                    <dt className="shrink-0 text-muted-foreground">支払</dt>
+                    <dd>{o.paymentMethod}</dd>
+                  </div>
+                ) : null}
+              </dl>
+            )}
+
+            {o.status === "paid" ? (
+              <div className="mt-3 border-t border-border pt-3">
+                <ShipControls
+                  sessionId={o.sessionId}
+                  shipped={Boolean(o.shippedAt)}
+                  shippedAt={o.shippedAt}
+                  carrierLabel={carrierLabel(o.carrier)}
+                  trackingNumber={o.trackingNumber}
+                  trackingUrl={trackingUrl(o.carrier, o.trackingNumber)}
+                />
+              </div>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+
+      {/* md以上: テーブル表示 */}
+      <div className="mt-4 hidden overflow-x-auto rounded-xl border border-border bg-white/60 md:block">
+        <table className="w-full min-w-[880px] text-sm">
         <thead className="border-b border-border bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
           <tr>
             <th className="px-4 py-3 text-left font-medium">日時</th>
@@ -274,39 +355,7 @@ function OrdersTable({ orders }: { orders: StoredOrder[] }) {
                 ) : null}
               </td>
               <td className="px-4 py-3 align-top">
-                {o.items.length === 0 ? (
-                  <span className="text-xs text-muted-foreground">—</span>
-                ) : (
-                  <ul className="space-y-1.5">
-                    {o.items.map((it, i) => {
-                      const parsed = parseItemName(it.name);
-                      return (
-                        <li key={i} className="leading-tight">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="text-sm font-medium">
-                              {parsed.name}
-                            </span>
-                            {parsed.size ? (
-                              <span className="rounded-full border border-border bg-muted/60 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                                {parsed.size}
-                              </span>
-                            ) : null}
-                            {it.qty > 1 ? (
-                              <span className="text-xs text-muted-foreground">
-                                × {it.qty}
-                              </span>
-                            ) : null}
-                          </div>
-                          {parsed.subtitle ? (
-                            <div className="text-[11px] text-muted-foreground">
-                              {parsed.subtitle}
-                            </div>
-                          ) : null}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
+                <OrderItems items={o.items} />
               </td>
               <td className="px-4 py-3 align-top text-right font-medium tabular-nums">
                 {o.amountTotal > 0 ? formatJPY(o.amountTotal) : "—"}
@@ -335,7 +384,41 @@ function OrdersTable({ orders }: { orders: StoredOrder[] }) {
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
+  );
+}
+
+function OrderItems({ items }: { items: StoredOrder["items"] }) {
+  if (items.length === 0) {
+    return <span className="text-xs text-muted-foreground">—</span>;
+  }
+  return (
+    <ul className="space-y-1.5">
+      {items.map((it, i) => {
+        const parsed = parseItemName(it.name);
+        return (
+          <li key={i} className="leading-tight">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-sm font-medium">{parsed.name}</span>
+              {parsed.size ? (
+                <span className="rounded-full border border-border bg-muted/60 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                  {parsed.size}
+                </span>
+              ) : null}
+              {it.qty > 1 ? (
+                <span className="text-xs text-muted-foreground">× {it.qty}</span>
+              ) : null}
+            </div>
+            {parsed.subtitle ? (
+              <div className="text-[11px] text-muted-foreground">
+                {parsed.subtitle}
+              </div>
+            ) : null}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

@@ -12,6 +12,7 @@ function getResend(): Resend | null {
 
 const FROM = process.env.RESEND_FROM ?? "740NLL <onboarding@resend.dev>";
 const OWNER_EMAIL = process.env.SHOP_OWNER_EMAIL;
+const REPLY_TO = process.env.RESEND_REPLY_TO;
 
 export type OrderItem = {
   name: string;
@@ -88,7 +89,7 @@ export async function sendOrderConfirmationToCustomer(
     ``,
     `──`,
     `740NLL`,
-    `https://necklace-site.vercel.app`,
+    `https://www.740nll.store`,
     ``,
     `注文 ID: ${data.sessionId}`,
   ].join("\n");
@@ -99,6 +100,7 @@ export async function sendOrderConfirmationToCustomer(
       to: [data.email],
       subject: "【740NLL】ご注文ありがとうございます",
       text,
+      ...(REPLY_TO ? { replyTo: REPLY_TO } : {}),
     });
   } catch (e) {
     console.error("[email] customer confirmation failed:", e);
@@ -131,7 +133,7 @@ export async function sendPaymentIssueToCustomer(
     ``,
     `──`,
     `740NLL`,
-    `https://necklace-site.vercel.app`,
+    `https://www.740nll.store`,
     ``,
     `セッション ID: ${sessionId}`,
   ].join("\n");
@@ -145,6 +147,7 @@ export async function sendPaymentIssueToCustomer(
           ? "【740NLL】お支払い期限切れのお知らせ"
           : "【740NLL】お支払い未完了のお知らせ",
       text,
+      ...(REPLY_TO ? { replyTo: REPLY_TO } : {}),
     });
   } catch (e) {
     console.error("[email] customer failure notice failed:", e);
@@ -231,7 +234,7 @@ export async function sendShipmentNotificationToCustomer(
     ``,
     `──`,
     `740NLL`,
-    `https://necklace-site.vercel.app`,
+    `https://www.740nll.store`,
     ``,
     `注文 ID: ${data.sessionId}`,
   ].join("\n");
