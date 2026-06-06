@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { listAllProductsWithInventory } from "@/lib/products";
 import { ProductCard } from "@/components/product/product-card";
+import { SizeGuide } from "@/components/product/size-guide";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -14,7 +15,7 @@ export default async function ProductsPage() {
   const products = await listAllProductsWithInventory();
   return (
     <div className="mx-auto max-w-[1400px] px-6 py-16 md:px-10 md:py-24">
-      <header className="mb-16 max-w-3xl md:mb-24">
+      <header className="mb-10 max-w-3xl md:mb-14">
         <p
           className="font-crayon-en crayon-fx text-5xl leading-none md:text-7xl"
           style={{ color: "var(--bead-blue)" }}
@@ -43,6 +44,10 @@ export default async function ProductsPage() {
           ¥2,500 each ・ 送料 一律 ¥150
         </p>
       </header>
+
+      <div className="mb-16 max-w-2xl md:mb-24">
+        <SizeGuide variant="banner" />
+      </div>
 
       <div className="grid grid-cols-2 gap-x-6 gap-y-16 md:grid-cols-3 md:gap-x-8 md:gap-y-20 lg:grid-cols-4">
         {products.map((p, i) => (

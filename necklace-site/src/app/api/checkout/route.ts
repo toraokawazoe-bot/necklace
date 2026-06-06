@@ -8,7 +8,9 @@ type CheckoutRequest = {
   lines: { productId: string; size: number; qty: number }[];
 };
 
-const ALLOWED_SIZES = new Set([36, 38, 40, 41, 42, 44]);
+// 1cm単位のカスタム長さに対応(UI側の選択肢と合わせる)
+const MIN_SIZE = 33;
+const MAX_SIZE = 50;
 
 export async function POST(req: Request) {
   const rl = await enforce(checkoutLimiter(), getClientIp(req));
@@ -65,7 +67,7 @@ export async function POST(req: Request) {
       );
     }
     const size = Number(line.size);
-    if (!Number.isFinite(size) || !ALLOWED_SIZES.has(size)) {
+    if (!Number.isInteger(size) || size < MIN_SIZE || size > MAX_SIZE) {
       return NextResponse.json(
         { error: `無効なサイズ指定です: ${line.size}` },
         { status: 400 },

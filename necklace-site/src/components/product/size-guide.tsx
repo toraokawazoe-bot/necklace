@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 
-export function SizeGuide() {
+export function SizeGuide({
+  variant = "link",
+}: {
+  /** link: 商品ページ用の控えめなリンク / banner: ショップページ用の大きめカード */
+  variant?: "link" | "banner";
+}) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -20,13 +25,46 @@ export function SizeGuide() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="font-hand text-[14px] text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
-      >
-        サイズの選び方 →
-      </button>
+      {variant === "banner" ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="group block w-full rounded-2xl border border-border px-5 py-6 text-left transition-colors hover:border-foreground/50 sm:px-8"
+          style={{ background: "rgba(239,217,176,0.28)" }}
+        >
+          <div className="flex flex-col items-center gap-5 sm:flex-row sm:gap-8">
+            <div className="w-full max-w-[250px] shrink-0 sm:w-[210px]">
+              <NeckIllustration />
+            </div>
+            <div className="w-full">
+              <p
+                className="font-marker text-[22px] leading-[1.25] sm:text-[26px]"
+                style={{ color: "var(--bead-olive)" }}
+              >
+                38cm と 41cm、どっちが合う？
+              </p>
+              <p className="font-hand mt-2.5 text-[15px] leading-[1.85] text-foreground/85">
+                メジャーがなくても大丈夫。首回りのかんたんな測り方と早見表で、
+                自分にちょうどいい長さがすぐわかります。
+              </p>
+              <p
+                className="font-marker mt-3.5 inline-flex items-center gap-1 text-[17px] underline-offset-4 transition-opacity group-hover:opacity-70"
+                style={{ color: "var(--bead-rust)" }}
+              >
+                サイズの選び方を見る →
+              </p>
+            </div>
+          </div>
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="font-hand text-[14px] text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
+        >
+          サイズの選び方 →
+        </button>
+      )}
 
       {/* オーバーレイ */}
       <div
@@ -150,8 +188,8 @@ export function SizeGuide() {
           <p className="font-hand mt-2 text-[15px] leading-[1.8] text-foreground/85">
             全てアジャスター付きで ±2cm 調整できるので、
             迷ったら <strong>41cm</strong> がおすすめ（詰めて短くも使えます）。
-            ジャストサイズで作りたい方は Instagram DM
-            で首回りを教えてください。1cm単位・同価格でお作りします。
+            ジャストサイズにしたい方は、サイズ選択の「カスタム」から
+            1cm単位・同価格で指定できます。相談したい方は Instagram DM へどうぞ。
           </p>
         </section>
       </div>
