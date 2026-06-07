@@ -1,10 +1,13 @@
 import type { MetadataRoute } from "next";
-import { listAllProductsWithInventory } from "@/lib/products";
+import { listAllProducts } from "@/lib/products";
 
 const BASE = "https://www.740nll.store";
 
+// 商品一覧をRedisから読むため、ビルド時の静的化はせずリクエスト時に生成する
+export const dynamic = "force-dynamic";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const products = await listAllProductsWithInventory().catch(() => []);
+  const products = await listAllProducts().catch(() => []);
   const now = new Date();
 
   const staticPages: MetadataRoute.Sitemap = [
