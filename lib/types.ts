@@ -26,6 +26,12 @@ export interface Order {
   priceOverride?: number;
   // status === "完了" になったタイミング。着金日として扱う
   completedAt?: number;
+  // --- Instagram DM 連携 ---
+  // "instagram" = DM から自動生成されたカード（未設定 or "manual" = 手動入力）
+  source?: "instagram" | "manual";
+  // 同一DMスレッドで二重にカードを作らないための識別子（送信者の IGSID）
+  igThreadId?: string;
+  igSenderId?: string;
 }
 
 export const STATUS_LIST: OrderStatus[] = [

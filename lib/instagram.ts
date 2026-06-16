@@ -1,0 +1,202 @@
+import crypto from "crypto";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { Order } from "@/lib/types";
+
+// 既存の orders / settings には手を加えず、DM は専用コレクションに保存する。
+const IG_MESSAGES = "ig_messages";
+const IG_CONVERSATIONS = "ig_conversations";
+const ORDERS = "orders";
+
+// ---- Webhook ペイロードの最小型 ----
+interface IgAttachment {
+  type?: string;
+  payload?: { url?: string };
+}
+
+interface IgMessage {
+  mid?: string;
+  text?: string;
+  is_echo?: boolean;
+  is_deleted?: boolean;
+  attachments?: IgAttachment[];
+  reply_to?: { story?: { url?: string; id?: string } };
+}
+
+interface IgMessaging {
+  sender?: { id?: string };
+  recipient?: { id?: string };
+  timestamp?: number;
+  message?: IgMessage;
+}
+
+interface IgEntry {
+  id?: string;
+  time?: number;
+  messaging?: IgMessaging[];
+}
+
+export interface IgWebhookBody {
+  object?: string;
+  entry?: IgEntry[];
+}
+
+/**
+ * Meta から届く X-Hub-Signature-256 を検証する。
+ * 署名は「sha256=<HMAC-SHA256(appSecret, 生のリクエストボディ)>」。
+ */
+export function verifyInstagramSignature(
+  rawBody: string,
+  signatureHeader: string | null,
+  appSecret: string
+): boolean {
+  if (!signatureHeader) return false;
+  const expected =
+    "sha256=" +
+    crypto.createHmac("sha256", appSecret).update(rawBody, "utf8").digest("hex");
+  const a = Buffer.from(signatureHeader);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
+/** DM 本文（テキスト or 添付の種別）を日本語の短い文字列にする。 */
+function summarizeMessage(m: IgMessage): string {
+  if (m.text && m.text.trim()) return m.text.trim();
+  if (m.reply_to?.story) return "[ストーリーへの返信]";
+  const att = m.attachments?.[0];
+  if (att) {
+    const labels: Record<string, string> = {
+      image: "[画像]",
+      video: "[動画]",
+      audio: "[音声]",
+      file: "[ファイル]",
+      share: "[シェア]",
+      ig_reel: "[リール]",
+      reel: "[リール]",
+      story_mention: "[ストーリーメンション]",
+    };
+    return labels[att.type ?? ""] ?? `[${att.type ?? "添付"}]`;
+  }
+  return "[メッセージ]";
+}
+
+/**
+ * 送信者のユーザー名を取得（INSTAGRAM_ACCESS_TOKEN が設定されている場合のみ）。
+ * 未設定なら null を返し、呼び出し側で IGSID を使う。
+ */
+async function resolveUsername(igsid: string): Promise<string | null> {
+  const token = process.env.INSTAGRAM_ACCESS_TOKEN;
+  if (!token) return null;
+  try {
+    const res = await fetch(
+      `https://graph.instagram.com/${encodeURIComponent(
+        igsid
+      )}?fields=username,name&access_token=${encodeURIComponent(token)}`
+    );
+    if (!res.ok) return null;
+    const j = (await res.json()) as { username?: string; name?: string };
+    if (j.username) return `@${j.username}`;
+    if (j.name) return j.name;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** 1 件の受信メッセージを処理する。 */
+async function processIncomingMessage(
+  entryId: string,
+  msg: IgMessaging
+): Promise<void> {
+  const m = msg.message;
+  if (!m) return;
+  // 自分（ショップ）が送ったメッセージのエコー / 削除通知はカードを作らない
+  if (m.is_echo || m.is_deleted) return;
+
+  const senderId = msg.sender?.id;
+  if (!senderId) return;
+
+  const ts = msg.timestamp ?? Date.now();
+  const mid = m.mid ?? `${senderId}_${ts}`;
+
+  // 冪等性: 同じメッセージ ID を二重処理しない（Meta は失敗時に再送する）
+  const msgRef = doc(db, IG_MESSAGES, mid);
+  const already = await getDoc(msgRef);
+  if (already.exists()) return;
+
+  const summary = summarizeMessage(m);
+
+  await setDoc(msgRef, {
+    id: mid,
+    threadId: senderId,
+    senderId,
+    recipientId: msg.recipient?.id ?? entryId ?? "",
+    text: m.text ?? "",
+    summary,
+    attachments: (m.attachments ?? []).map((a) => ({
+      type: a.type ?? "",
+      url: a.payload?.url ?? "",
+    })),
+    ts,
+    createdAt: Date.now(),
+  });
+
+  // スレッド（= 送信者）ごとに受注カードは 1 枚だけ作る。
+  // 2 通目以降は会話メタの更新のみ。既存カードの手動編集は一切上書きしない。
+  const convRef = doc(db, IG_CONVERSATIONS, senderId);
+  const convSnap = await getDoc(convRef);
+
+  if (!convSnap.exists()) {
+    const customer = (await resolveUsername(senderId)) ?? `IG:${senderId}`;
+    const orderId = `o_ig_${senderId}_${ts}`;
+    const order: Order = {
+      id: orderId,
+      created: ts,
+      customer,
+      type: "",
+      length: "",
+      design: "",
+      payment: "",
+      status: "受信トレイ",
+      memo: `【Instagram DM】\n${summary}`,
+      source: "instagram",
+      igThreadId: senderId,
+      igSenderId: senderId,
+    };
+    await setDoc(doc(db, ORDERS, orderId), order);
+    await setDoc(convRef, {
+      threadId: senderId,
+      orderId,
+      customer,
+      lastText: summary,
+      lastTs: ts,
+      messageCount: 1,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  } else {
+    const data = convSnap.data() as { messageCount?: number };
+    await setDoc(
+      convRef,
+      {
+        lastText: summary,
+        lastTs: ts,
+        messageCount: (data.messageCount ?? 0) + 1,
+        updatedAt: Date.now(),
+      },
+      { merge: true }
+    );
+  }
+}
+
+/** Webhook の POST ボディを処理する。Instagram 以外のイベントは無視。 */
+export async function handleInstagramEvent(body: IgWebhookBody): Promise<void> {
+  if (!body || body.object !== "instagram" || !Array.isArray(body.entry)) return;
+  for (const entry of body.entry) {
+    const events = entry.messaging ?? [];
+    for (const ev of events) {
+      await processIncomingMessage(entry.id ?? "", ev);
+    }
+  }
+}
