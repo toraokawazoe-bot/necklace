@@ -193,6 +193,37 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
 
         <div className={styles.dateInfo}>受注日：{formatDate(order.created)}</div>
 
+        {isInstagram && (
+          <div className={styles.field}>
+            <label className={styles.label}>相手の識別情報</label>
+            <div className={styles.igIdentity}>
+              <div className={styles.igIdRow}>
+                <span className={styles.igIdKey}>現在のID</span>
+                <span className={styles.igIdVal}>
+                  {order.igUsername || customer || "（取得前）"}
+                </span>
+              </div>
+              <div className={styles.igIdRow}>
+                <span className={styles.igIdKey}>固有番号</span>
+                <span className={styles.igIdNum}>
+                  {order.igSenderId || order.igThreadId || "—"}
+                </span>
+              </div>
+              {order.igUsernameHistory && order.igUsernameHistory.length > 0 && (
+                <div className={styles.igNameChange}>
+                  ⚠️ ユーザーネーム変更：
+                  {order.igUsernameHistory.map((h) => h.username).join(" → ")}
+                  {" → "}
+                  {order.igUsername || "現在"}
+                </div>
+              )}
+              <div className={styles.igIdNote}>
+                固有番号は相手がユーザーネームを変えても変わりません
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className={styles.field}>
           <label className={styles.label}>インスタID</label>
           <input
@@ -202,6 +233,11 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
             onChange={(e) => setCustomer(e.target.value)}
             autoComplete="off"
           />
+          {isInstagram && (
+            <div className={styles.hint}>
+              自分用の表示名（自由に変更可。相手の現在のIDは上に表示）
+            </div>
+          )}
         </div>
 
         {isInstagram && (

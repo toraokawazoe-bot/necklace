@@ -8,6 +8,10 @@ const IG_MESSAGES = "ig_messages";
 const IG_CONVERSATIONS = "ig_conversations";
 const ORDERS = "orders";
 
+// ユーザーネームは変わりうるが、毎メッセージで Graph に問い合わせるのは無駄。
+// 同一スレッドでは最後の取得から6時間あけて再取得する。
+const USERNAME_RECHECK_MS = 6 * 60 * 60 * 1000;
+
 // ---- Webhook ペイロードの最小型 ----
 interface IgAttachment {
   type?: string;
@@ -212,7 +216,8 @@ async function processIncomingMessage(
   const convSnap = await getDoc(convRef);
 
   if (!convSnap.exists()) {
-    const customer = (await resolveUsername(senderId)) ?? `IG:${senderId}`;
+    const handle = await resolveUsername(senderId); // "@xxx" | 表示名 | null
+    const customer = handle ?? `IG:${senderId}`;
     const orderId = `o_ig_${senderId}_${ts}`;
     const order: Order = {
       id: orderId,
@@ -227,12 +232,16 @@ async function processIncomingMessage(
       source: "instagram",
       igThreadId: senderId,
       igSenderId: senderId,
+      ...(handle ? { igUsername: handle } : {}),
     };
     await setDoc(doc(db, ORDERS, orderId), order);
     await setDoc(convRef, {
       threadId: senderId,
       orderId,
       customer,
+      igUsername: handle ?? "",
+      igUsernameCheckedAt: Date.now(),
+      igUsernameHistory: [],
       lastText: summary,
       lastTs: ts,
       messageCount: 1,
@@ -240,17 +249,66 @@ async function processIncomingMessage(
       updatedAt: Date.now(),
     });
   } else {
-    const data = convSnap.data() as { messageCount?: number };
-    await setDoc(
-      convRef,
-      {
-        lastText: summary,
-        lastTs: ts,
-        messageCount: (data.messageCount ?? 0) + 1,
-        updatedAt: Date.now(),
-      },
-      { merge: true }
-    );
+    const data = convSnap.data() as {
+      messageCount?: number;
+      orderId?: string;
+      igUsername?: string;
+      igUsernameCheckedAt?: number;
+      igUsernameHistory?: { username: string; ts: number }[];
+    };
+
+    const convUpdate: Record<string, unknown> = {
+      lastText: summary,
+      lastTs: ts,
+      messageCount: (data.messageCount ?? 0) + 1,
+      updatedAt: Date.now(),
+    };
+
+    // ユーザーネームの変更追跡。一定間隔をあけて現在の @handle を再取得し、
+    // 変わっていたら旧名を履歴に積んで現在名を更新する（誰か分からなくなるのを防ぐ）。
+    const checkedAt = data.igUsernameCheckedAt ?? 0;
+    if (Date.now() - checkedAt > USERNAME_RECHECK_MS) {
+      const handle = await resolveUsername(senderId);
+      convUpdate.igUsernameCheckedAt = Date.now();
+      if (handle && handle !== data.igUsername) {
+        const prevAuto = data.igUsername; // これまでの自動取得ユーザーネーム
+        const history = data.igUsernameHistory ?? [];
+        const nextHistory = prevAuto
+          ? [...history, { username: prevAuto, ts: Date.now() }]
+          : history;
+        convUpdate.igUsername = handle;
+        convUpdate.igUsernameHistory = nextHistory;
+
+        // 受注カードにも反映する。ただし表示名（customer）は owner が手で
+        // 編集している場合があるので、自動取得値のままのときだけ追従する。
+        if (data.orderId) {
+          const orderRef = doc(db, ORDERS, data.orderId);
+          const orderUpdate: Record<string, unknown> = {
+            igUsername: handle,
+            igUsernameHistory: nextHistory,
+          };
+          const orderSnap = await getDoc(orderRef);
+          const orderData = orderSnap.exists()
+            ? (orderSnap.data() as Order)
+            : null;
+          // owner が表示名を変えていない（旧ユーザーネーム / IGSID フォールバック /
+          // 空欄のまま）なら新しいユーザーネームに追従させる。
+          const igFallback = `IG:${senderId}`;
+          const untouched =
+            !!orderData &&
+            (orderData.customer === prevAuto ||
+              orderData.customer === igFallback ||
+              !orderData.customer);
+          if (untouched) {
+            orderUpdate.customer = handle;
+            convUpdate.customer = handle;
+          }
+          await setDoc(orderRef, orderUpdate, { merge: true });
+        }
+      }
+    }
+
+    await setDoc(convRef, convUpdate, { merge: true });
   }
 }
 

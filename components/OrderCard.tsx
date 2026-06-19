@@ -41,7 +41,17 @@ export default function OrderCard({ order, settings, avgDays, onClick }: Props) 
           {order.source === "instagram" && (
             <span className={styles.igBadge}>📷 IG</span>
           )}
-          {order.customer || "（未入力）"}
+          {order.customer || order.igUsername || "（未入力）"}
+          {order.igUsername &&
+            order.customer &&
+            order.igUsername !== order.customer && (
+              <span className={styles.igHandle}>{order.igUsername}</span>
+            )}
+          {order.igUsernameHistory && order.igUsernameHistory.length > 0 && (
+            <span className={styles.igRenamed} title="ユーザーネーム変更あり">
+              改名
+            </span>
+          )}
         </span>
         <span className={`${styles.statusBadge} ${statusClass[order.status] || ""}`}>
           {order.status}

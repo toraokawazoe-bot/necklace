@@ -32,6 +32,12 @@ export interface Order {
   // 同一DMスレッドで二重にカードを作らないための識別子（送信者の IGSID）
   igThreadId?: string;
   igSenderId?: string;
+  // 相手の「現在の」ユーザーネーム（@handle）。Instagram では変更されうる。
+  // 本人の不変の鍵は igSenderId（IGSID）であり、これは表示用の最新値。
+  igUsername?: string;
+  // ユーザーネーム変更履歴（古い順）。改名のたびに「変更前の名前」を積む。
+  // これがあると、相手が改名しても誰だったか辿れる。
+  igUsernameHistory?: { username: string; ts: number }[];
 }
 
 // Instagram DM の 1 メッセージ（ig_messages コレクションの 1 ドキュメント）。
