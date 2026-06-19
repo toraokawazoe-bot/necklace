@@ -1,6 +1,6 @@
 "use client";
 
-import { Order, Settings, nextStatus } from "@/lib/types";
+import { Order, OrderStatus, Settings, nextStatus } from "@/lib/types";
 import { formatDate } from "@/lib/storage";
 import { effectivePrice, elapsedDays, formatYen, isOverdue } from "@/lib/pricing";
 import styles from "./OrderCard.module.css";
@@ -13,7 +13,8 @@ interface Props {
   onAdvance: () => void;
 }
 
-const statusClass: Record<string, string> = {
+// Record<OrderStatus, ...> にして、ステータスを追加したときの対応漏れを型で検知する。
+const statusClass: Record<OrderStatus, string> = {
   "受信トレイ": styles.sInbox,
   "問い合わせ中": styles.sInquiry,
   "制作中": styles.sMaking,

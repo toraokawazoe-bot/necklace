@@ -1,12 +1,10 @@
 import { NextRequest } from "next/server";
 import { sendInstagramMessage } from "@/lib/instagram";
 import { getAdminDb, getAdminAuth } from "@/lib/firebaseAdmin";
+import { IG_MESSAGES, IG_CONVERSATIONS } from "@/lib/collections";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const IG_MESSAGES = "ig_messages";
-const IG_CONVERSATIONS = "ig_conversations";
 
 // テキストDMの上限（Send API の仕様）
 const MAX_TEXT_BYTES = 1000;

@@ -1,15 +1,12 @@
 import crypto from "crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebaseAdmin";
-import { Order } from "@/lib/types";
+import { ORDERS, IG_MESSAGES, IG_CONVERSATIONS } from "@/lib/collections";
+import { IgConversationDoc, Order } from "@/lib/types";
 
 // このファイルはサーバー専用。Firestore セキュリティルールを認証必須に締めても
 // webhook（Meta から来る・Firebase 認証なし）が書けるよう、Admin SDK を使う。
-
 // 既存の orders / settings には手を加えず、DM は専用コレクションに保存する。
-const IG_MESSAGES = "ig_messages";
-const IG_CONVERSATIONS = "ig_conversations";
-const ORDERS = "orders";
 
 // ユーザーネームは変わりうるが、毎メッセージで Graph に問い合わせるのは無駄。
 // 同一スレッドでは最後の取得から6時間あけて再取得する。
@@ -297,13 +294,7 @@ async function processIncomingMessage(
       });
     });
   } else {
-    const data = convSnap.data() as {
-      messageCount?: number;
-      orderId?: string;
-      igUsername?: string;
-      igUsernameCheckedAt?: number;
-      igUsernameHistory?: { username: string; ts: number }[];
-    };
+    const data = (convSnap.data() ?? {}) as IgConversationDoc;
 
     const convUpdate: Record<string, unknown> = {
       lastText: summary,

@@ -12,13 +12,15 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { EMPTY_SETTINGS, IgMessageDoc, Order, Settings } from "./types";
+import {
+  ORDERS as ORDERS_COL,
+  IG_MESSAGES as IG_MESSAGES_COL,
+  SETTINGS as SETTINGS_COL,
+  META as META_COL,
+  SETTINGS_DOC,
+  SEED_META_DOC,
+} from "./collections";
 
-const ORDERS_COL = "orders";
-const IG_MESSAGES_COL = "ig_messages";
-const SETTINGS_COL = "settings";
-const SETTINGS_DOC = "main";
-const META_COL = "meta";
-const SEED_META_DOC = "seed";
 const LEGACY_LS_KEY = "necklace_orders_v1";
 const LEGACY_LS_MIGRATED_FLAG = "necklace_orders_v1_migrated";
 

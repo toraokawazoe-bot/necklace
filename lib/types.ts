@@ -57,6 +57,27 @@ export interface IgMessageDoc {
   direction?: "in" | "out";
 }
 
+// Instagram DM スレッドのメタ情報（ig_conversations コレクションの1ドキュメント）。
+// 書き込みは lib/instagram.ts（webhook）と送信API。1スレッド=1ドキュメント。
+export interface IgConversationDoc {
+  threadId: string;
+  orderId?: string;
+  customer?: string;
+  // 現在の @username と、その最終取得時刻・変更履歴
+  igUsername?: string;
+  igUsernameCheckedAt?: number;
+  igUsernameHistory?: { username: string; ts: number }[];
+  // 受信プレビュー
+  lastText?: string;
+  lastTs?: number;
+  // ショップからの返信プレビュー（受信側を上書きしないため分離）
+  lastOutText?: string;
+  lastOutTs?: number;
+  messageCount?: number;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
 export const STATUS_LIST: OrderStatus[] = [
   "受信トレイ",
   "問い合わせ中",
