@@ -73,6 +73,15 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
   const [previewOpen, setPreviewOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // 発送先・配送
+  const [shippingName, setShippingName] = useState(order.shippingName ?? "");
+  const [postalCode, setPostalCode] = useState(order.postalCode ?? "");
+  const [address, setAddress] = useState(order.address ?? "");
+  const [phone, setPhone] = useState(order.phone ?? "");
+  const [trackingNumber, setTrackingNumber] = useState(order.trackingNumber ?? "");
+  const [shippedAt, setShippedAt] = useState<number | undefined>(order.shippedAt);
+  const [addrCopied, setAddrCopied] = useState(false);
+
   const isInstagram = order.source === "instagram";
   const [thread, setThread] = useState<IgMessageDoc[]>([]);
   const [threadLoaded, setThreadLoaded] = useState(false);
@@ -211,7 +220,49 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
       const parsed = Number(priceTrim);
       if (!Number.isNaN(parsed)) next.priceOverride = parsed;
     }
+    // 発送先：空欄はキー自体を消してドキュメントを汚さない。
+    type ShipKey =
+      | "shippingName"
+      | "postalCode"
+      | "address"
+      | "phone"
+      | "trackingNumber";
+    const setOrDelete = (key: ShipKey, value: string) => {
+      const v = value.trim();
+      if (v) next[key] = v;
+      else delete next[key];
+    };
+    setOrDelete("shippingName", shippingName);
+    setOrDelete("postalCode", postalCode);
+    setOrDelete("address", address);
+    setOrDelete("phone", phone);
+    setOrDelete("trackingNumber", trackingNumber);
+    if (typeof shippedAt === "number") next.shippedAt = shippedAt;
+    else delete next.shippedAt;
     onSave(next);
+  };
+
+  // 宛先を配送サイトに貼りやすい形でクリップボードへ。住所探し→再入力の二重手間を消す。
+  const handleCopyAddress = async () => {
+    const lines = [
+      postalCode.trim() ? `〒${postalCode.trim()}` : "",
+      address.trim(),
+      shippingName.trim() ? `${shippingName.trim()} 様` : "",
+      phone.trim(),
+    ].filter(Boolean);
+    if (lines.length === 0) {
+      alert("コピーする宛先がありません。");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(lines.join("\n"));
+      // 発送作業は「コピー→アプリ切替→貼付」の高速反復。成功は alert ではなく
+      // ボタン文言の一時変化で知らせ、テンポを止めない。
+      setAddrCopied(true);
+      setTimeout(() => setAddrCopied(false), 1500);
+    } catch {
+      alert("コピーに失敗しました。手動で選択してコピーしてください。");
+    }
   };
 
   const handleDelete = () => {
@@ -505,6 +556,79 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
             onChange={(e) => setMemo(e.target.value)}
             rows={2}
           />
+        </div>
+
+        <div className={styles.shipSection}>
+          <div className={styles.shipHead}>
+            <span className={styles.label}>発送先・配送</span>
+            <button
+              type="button"
+              className={styles.copyAddrBtn}
+              onClick={handleCopyAddress}
+            >
+              {addrCopied ? "コピー済 ✓" : "宛先をコピー"}
+            </button>
+          </div>
+          <input
+            type="text"
+            placeholder="宛名（例：田中花子）"
+            value={shippingName}
+            onChange={(e) => setShippingName(e.target.value)}
+            autoComplete="off"
+          />
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="郵便番号"
+            value={postalCode}
+            onChange={(e) => setPostalCode(e.target.value)}
+            autoComplete="off"
+          />
+          <textarea
+            placeholder="住所（都道府県から建物・部屋番号まで）"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            rows={2}
+          />
+          <input
+            type="tel"
+            inputMode="tel"
+            placeholder="電話番号"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            autoComplete="off"
+          />
+          <input
+            type="text"
+            placeholder="追跡番号"
+            value={trackingNumber}
+            onChange={(e) => setTrackingNumber(e.target.value)}
+            autoComplete="off"
+          />
+          <div className={styles.shipRow}>
+            {shippedAt ? (
+              <>
+                <span className={styles.shipDate}>
+                  発送日：{formatDate(shippedAt)}
+                </span>
+                <button
+                  type="button"
+                  className={styles.shipClearBtn}
+                  onClick={() => setShippedAt(undefined)}
+                >
+                  取り消し
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className={styles.shipDoneBtn}
+                onClick={() => setShippedAt(Date.now())}
+              >
+                📦 発送済みにする（発送日を記録）
+              </button>
+            )}
+          </div>
         </div>
 
         <div className={styles.actions}>

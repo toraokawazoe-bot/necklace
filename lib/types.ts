@@ -38,6 +38,14 @@ export interface Order {
   // ユーザーネーム変更履歴（古い順）。改名のたびに「変更前の名前」を積む。
   // これがあると、相手が改名しても誰だったか辿れる。
   igUsernameHistory?: { username: string; ts: number }[];
+  // --- 発送先・配送 ---
+  // 住所はこれまでメモ/DM/記憶に散在していた。構造化して「宛先コピー」や検索を効かせる。
+  shippingName?: string; // 宛名（本名。customer はあだ名/IDのことが多い）
+  postalCode?: string;
+  address?: string;
+  phone?: string;
+  trackingNumber?: string; // 追跡番号（「届いた?」に即答するため）
+  shippedAt?: number; // 発送日。completedAt（着金/完了）とは別軸
 }
 
 // Instagram DM の 1 メッセージ（ig_messages コレクションの 1 ドキュメント）。

@@ -108,6 +108,9 @@ export default function OrderCard({
             ⏰ {elapsedDays(order)}日経過
           </span>
         )}
+        {order.shippedAt && (
+          <span className={styles.shipped}>📦 {formatDate(order.shippedAt)} 発送済</span>
+        )}
         {next && (
           <button
             type="button"
