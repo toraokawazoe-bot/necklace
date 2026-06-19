@@ -6,11 +6,14 @@ import {
   onSnapshot,
   getDocs,
   writeBatch,
+  query,
+  where,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { EMPTY_SETTINGS, Order, Settings } from "./types";
+import { EMPTY_SETTINGS, IgMessageDoc, Order, Settings } from "./types";
 
 const ORDERS_COL = "orders";
+const IG_MESSAGES_COL = "ig_messages";
 const SETTINGS_COL = "settings";
 const SETTINGS_DOC = "main";
 const LEGACY_LS_KEY = "necklace_orders_v1";
@@ -98,6 +101,23 @@ export async function migrateLegacyLocalOrders(): Promise<number> {
   return missing.length;
 }
 
+// 1 つの DM スレッド（= 送信者）の受信メッセージを時系列で購読する。
+// where + orderBy の複合インデックスを避けるため、並べ替えはクライアント側で行う。
+export function subscribeThreadMessages(
+  threadId: string,
+  onData: (messages: IgMessageDoc[]) => void
+): () => void {
+  const q = query(
+    collection(db, IG_MESSAGES_COL),
+    where("threadId", "==", threadId)
+  );
+  return onSnapshot(q, (snapshot) => {
+    const messages = snapshot.docs.map((d) => d.data() as IgMessageDoc);
+    messages.sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
+    onData(messages);
+  });
+}
+
 export function subscribeSettings(
   onData: (settings: Settings) => void
 ): () => void {
@@ -136,4 +156,14 @@ export function formatDate(ts: number): string {
   if (!ts) return "";
   const d = new Date(ts);
   return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+// DM 会話ログ用：月日と時刻まで表示する（例：6/18 14:05）
+export function formatDateTime(ts: number): string {
+  if (!ts) return "";
+  const d = new Date(ts);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(
+    d.getMinutes()
+  )}`;
 }

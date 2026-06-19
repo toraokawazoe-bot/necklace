@@ -42,6 +42,19 @@
   min-width: 0;
 }
 
+.igBadge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 2px 6px;
+  margin-right: 6px;
+  border-radius: 5px;
+  color: #fff;
+  background: linear-gradient(45deg, #f09433, #dc2743 45%, #bc1888 80%);
+  vertical-align: middle;
+}
+
 .statusBadge {
   font-size: 11px;
   padding: 3px 10px;

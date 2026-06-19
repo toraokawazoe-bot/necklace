@@ -34,6 +34,23 @@ export interface Order {
   igSenderId?: string;
 }
 
+// Instagram DM の 1 メッセージ（ig_messages コレクションの 1 ドキュメント）。
+// 書き込みは lib/instagram.ts、読み出しは注文詳細の会話ログで使う。
+export interface IgMessageDoc {
+  id: string;
+  threadId: string;
+  senderId: string;
+  recipientId: string;
+  text: string;
+  summary: string;
+  attachments: { type: string; url: string }[];
+  ts: number;
+  createdAt: number;
+  // "in" = お客様からの受信 / "out" = ショップからの返信。
+  // 旧データには無い項目。未設定は "in"（受信）として扱う。
+  direction?: "in" | "out";
+}
+
 export const STATUS_LIST: OrderStatus[] = [
   "受信トレイ",
   "問い合わせ中",

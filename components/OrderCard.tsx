@@ -38,6 +38,9 @@ export default function OrderCard({ order, settings, avgDays, onClick }: Props) 
     >
       <div className={styles.topRow}>
         <span className={styles.customer}>
+          {order.source === "instagram" && (
+            <span className={styles.igBadge}>📷 IG</span>
+          )}
           {order.customer || "（未入力）"}
         </span>
         <span className={`${styles.statusBadge} ${statusClass[order.status] || ""}`}>

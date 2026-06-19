@@ -104,6 +104,69 @@ async function resolveUsername(igsid: string): Promise<string | null> {
   }
 }
 
+// ---- DM 送信（返信） ----
+// Instagram ログイン版の Send API。ホストは graph.instagram.com（facebook.com ではない）。
+const SEND_ENDPOINT = "https://graph.instagram.com/v23.0/me/messages";
+
+export interface SendError {
+  code?: string | number;
+  error_subcode?: number;
+  message?: string;
+  type?: string;
+}
+
+export type SendResult =
+  | { ok: true; messageId: string; recipientId: string }
+  | { ok: false; status: number; error: SendError };
+
+/**
+ * 相手（IGSID）へテキスト DM を送る。
+ * - トークンは INSTAGRAM_ACCESS_TOKEN（サーバー専用・instagram_business_manage_messages 権限が必要）。
+ * - 標準メッセージウィンドウ（相手の最終 DM から 24 時間以内）でのみ成功する。
+ * - 失敗時は Graph のエラー本体（{code, error_subcode, ...}）を unwrap して返す。
+ */
+export async function sendInstagramMessage(
+  recipientId: string,
+  text: string
+): Promise<SendResult> {
+  const token = process.env.INSTAGRAM_ACCESS_TOKEN;
+  if (!token) {
+    return { ok: false, status: 500, error: { code: "no_token" } };
+  }
+  try {
+    const res = await fetch(SEND_ENDPOINT, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        recipient: { id: recipientId },
+        message: { text },
+      }),
+    });
+    const j = (await res.json().catch(() => ({}))) as {
+      recipient_id?: string;
+      message_id?: string;
+      error?: SendError;
+    };
+    if (!res.ok) {
+      return {
+        ok: false,
+        status: res.status,
+        error: j.error ?? { message: "unknown_error" },
+      };
+    }
+    return {
+      ok: true,
+      messageId: j.message_id ?? "",
+      recipientId: j.recipient_id ?? recipientId,
+    };
+  } catch {
+    return { ok: false, status: 502, error: { code: "network" } };
+  }
+}
+
 /** 1 件の受信メッセージを処理する。 */
 async function processIncomingMessage(
   entryId: string,
@@ -140,6 +203,7 @@ async function processIncomingMessage(
     })),
     ts,
     createdAt: Date.now(),
+    direction: "in",
   });
 
   // スレッド（= 送信者）ごとに受注カードは 1 枚だけ作る。

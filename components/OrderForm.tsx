@@ -1,8 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Order, ItemType, PaymentMethod, OrderStatus, Settings, STATUS_LIST } from "@/lib/types";
-import { formatDate } from "@/lib/storage";
+import {
+  Order,
+  ItemType,
+  PaymentMethod,
+  OrderStatus,
+  Settings,
+  STATUS_LIST,
+  IgMessageDoc,
+} from "@/lib/types";
+import { formatDate, formatDateTime, subscribeThreadMessages } from "@/lib/storage";
 import { compressImage } from "@/lib/image";
 import { defaultPrice, formatYen } from "@/lib/pricing";
 import styles from "./OrderForm.module.css";
@@ -13,6 +21,39 @@ interface Props {
   onSave: (order: Order) => void;
   onDelete: (id: string) => void;
   onClose: () => void;
+}
+
+// 送信失敗時、Graph のエラー（route が unwrap して { error: {...} } で返す）を
+// 日本語のユーザー向けメッセージに変換する。
+function igErrorMessage(data: unknown): string {
+  const err =
+    (
+      data as {
+        error?: { code?: string | number; error_subcode?: number; message?: string };
+      } | null
+    )?.error ?? null;
+  const code = err?.code;
+  const sub = err?.error_subcode;
+  const msg = (err?.message ?? "").toLowerCase();
+
+  if (code === "no_token")
+    return "送信トークンが未設定です。管理者にご連絡ください。";
+  if (code === "network")
+    return "ネットワークエラーで送信できませんでした。電波を確認して再度お試しください。";
+  if (code === "too_long")
+    return "メッセージが長すぎます（1000バイトまで）。短くしてください。";
+  // 24時間ウィンドウ超過
+  if ((code === 10 && (sub === 2534022 || sub === 2018278)) ||
+      (msg.includes("outside") && msg.includes("window")))
+    return "最後の受信から24時間が過ぎているため、Instagramの仕様で返信できませんでした。";
+  if (code === 190)
+    return "アクセストークンの有効期限が切れています。再認証が必要です。";
+  if (code === 200)
+    return "メッセージ送信の権限が不足しています（instagram_business_manage_messages）。";
+  if (code === 100 && sub === 2018001) return "送信先が見つかりませんでした。";
+  if (code === 613)
+    return "送信回数の上限に達しました。しばらくしてからお試しください。";
+  return "送信に失敗しました。時間をおいて再度お試しください。";
 }
 
 export default function OrderForm({ order, settings, onSave, onDelete, onClose }: Props) {
@@ -31,12 +72,65 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
   const [previewOpen, setPreviewOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const isInstagram = order.source === "instagram";
+  const [thread, setThread] = useState<IgMessageDoc[]>([]);
+  const [threadLoaded, setThreadLoaded] = useState(false);
+  const [reply, setReply] = useState("");
+  const [sending, setSending] = useState(false);
+
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = "";
     };
   }, []);
+
+  useEffect(() => {
+    if (!isInstagram || !order.igThreadId) return;
+    const unsub = subscribeThreadMessages(order.igThreadId, (msgs) => {
+      setThread(msgs);
+      setThreadLoaded(true);
+    });
+    return () => unsub();
+  }, [isInstagram, order.igThreadId]);
+
+  // 標準メッセージウィンドウ判定：最後の「受信」メッセージから24時間以内か。
+  // direction 未設定の旧データは受信扱い（!== "out"）。
+  const lastIncomingTs = thread.reduce(
+    (acc, m) => (m.direction !== "out" ? Math.max(acc, m.ts ?? 0) : acc),
+    0
+  );
+  const windowOpen =
+    lastIncomingTs > 0 && Date.now() - lastIncomingTs < 24 * 60 * 60 * 1000;
+
+  // 送信 API の上限は 1000「バイト」（UTF-8）。日本語は1文字≈3バイトなので
+  // 文字数ではなくバイト数で判定し、サーバー側の Buffer.byteLength 判定と揃える。
+  const replyBytes = new TextEncoder().encode(reply).length;
+  const replyTooLong = replyBytes > 1000;
+
+  const handleSendReply = async () => {
+    const text = reply.trim();
+    if (!order.igThreadId || !text || sending || replyTooLong) return;
+    setSending(true);
+    try {
+      const res = await fetch("/api/instagram/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipientId: order.igThreadId, text }),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.ok) {
+        // 送信メッセージは onSnapshot 経由でバブルとして自動表示される
+        setReply("");
+      } else {
+        alert(igErrorMessage(data));
+      }
+    } catch {
+      alert("送信に失敗しました。時間をおいて再度お試しください。");
+    } finally {
+      setSending(false);
+    }
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -109,6 +203,72 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
             autoComplete="off"
           />
         </div>
+
+        {isInstagram && (
+          <div className={styles.field}>
+            <label className={styles.label}>DM会話</label>
+            <div className={styles.dmThread}>
+              {!threadLoaded ? (
+                <div className={styles.dmEmpty}>読み込み中…</div>
+              ) : thread.length === 0 ? (
+                <div className={styles.dmEmpty}>
+                  まだ受信ログがありません
+                </div>
+              ) : (
+                thread.map((m) => {
+                  const isOut = m.direction === "out";
+                  return (
+                    <div
+                      key={m.id}
+                      className={`${styles.dmRow} ${isOut ? styles.dmRowOut : ""}`}
+                    >
+                      <div
+                        className={`${styles.dmBubble} ${
+                          isOut ? styles.dmBubbleOut : ""
+                        }`}
+                      >
+                        {m.text && m.text.trim() ? m.text : m.summary}
+                      </div>
+                      <div className={styles.dmTime}>{formatDateTime(m.ts)}</div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {windowOpen ? (
+              <div className={styles.hint}>24時間以内：返信できます</div>
+            ) : (
+              <div className={styles.dmWindowWarn}>
+                最後の受信から24時間以上経過。Instagramの仕様で返信できない場合があります
+              </div>
+            )}
+            <textarea
+              className={styles.dmComposer}
+              value={reply}
+              onChange={(e) => setReply(e.target.value)}
+              rows={2}
+              placeholder="返信を入力…"
+            />
+            {reply.length > 0 && (
+              <div
+                className={`${styles.dmByteCount} ${
+                  replyTooLong ? styles.dmByteOver : ""
+                }`}
+              >
+                {replyBytes} / 1000 バイト
+              </div>
+            )}
+            <button
+              type="button"
+              className={styles.dmSendBtn}
+              onClick={handleSendReply}
+              disabled={!reply.trim() || sending || replyTooLong}
+            >
+              {sending ? "送信中…" : "送信"}
+            </button>
+          </div>
+        )}
 
         <div className={styles.field}>
           <label className={styles.label}>DMスクショ</label>
