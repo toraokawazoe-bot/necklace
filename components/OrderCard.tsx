@@ -1,6 +1,6 @@
 "use client";
 
-import { Order, Settings } from "@/lib/types";
+import { Order, Settings, nextStatus } from "@/lib/types";
 import { formatDate } from "@/lib/storage";
 import { effectivePrice, elapsedDays, formatYen, isOverdue } from "@/lib/pricing";
 import styles from "./OrderCard.module.css";
@@ -10,6 +10,7 @@ interface Props {
   settings: Settings;
   avgDays: number | null;
   onClick: () => void;
+  onAdvance: () => void;
 }
 
 const statusClass: Record<string, string> = {
@@ -22,7 +23,13 @@ const statusClass: Record<string, string> = {
   "失注": styles.sLost,
 };
 
-export default function OrderCard({ order, settings, avgDays, onClick }: Props) {
+export default function OrderCard({
+  order,
+  settings,
+  avgDays,
+  onClick,
+  onAdvance,
+}: Props) {
   const isInbox = order.status === "受信トレイ";
   const overdue = isOverdue(order, avgDays);
   const designDisplay =
@@ -30,11 +37,25 @@ export default function OrderCard({ order, settings, avgDays, onClick }: Props) 
       ? order.design.slice(0, 32) + "…"
       : order.design;
   const price = effectivePrice(settings, order);
+  const next = nextStatus(order.status);
 
+  // カードはクリックで詳細を開く。中に「次へ」ボタンを置くため、ネスト不可な
+  // <button> ではなく role="button" の <div> にしてキーボード操作も担保する。
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       className={`${styles.card} ${isInbox ? styles.inbox : ""} ${overdue ? styles.overdue : ""}`}
       onClick={onClick}
+      onKeyDown={(e) => {
+        // カード本体上のキー操作だけ拾う。内側の「次へ」ボタン由来の
+        // Enter/Space が bubble してモーダルを同時に開くのを防ぐ。
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
     >
       <div className={styles.topRow}>
         <span className={styles.customer}>
@@ -86,7 +107,20 @@ export default function OrderCard({ order, settings, avgDays, onClick }: Props) 
             ⏰ {elapsedDays(order)}日経過
           </span>
         )}
+        {next && (
+          <button
+            type="button"
+            className={styles.advanceBtn}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAdvance();
+            }}
+            title={`「${next}」に進める`}
+          >
+            {next} →
+          </button>
+        )}
       </div>
-    </button>
+    </div>
   );
 }

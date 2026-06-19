@@ -67,6 +67,23 @@ export const STATUS_LIST: OrderStatus[] = [
   "失注",
 ];
 
+// ステータスを1段階進める流れ（失注は対象外、完了が終点）。
+export const ADVANCE_FLOW: OrderStatus[] = [
+  "受信トレイ",
+  "問い合わせ中",
+  "制作中",
+  "支払い待ち",
+  "発送待ち",
+  "完了",
+];
+
+// 次に進むステータス。終点（完了）や対象外（失注）は null。
+export function nextStatus(s: OrderStatus): OrderStatus | null {
+  const i = ADVANCE_FLOW.indexOf(s);
+  if (i === -1 || i === ADVANCE_FLOW.length - 1) return null;
+  return ADVANCE_FLOW[i + 1];
+}
+
 export interface MonthlyPrice {
   necklace?: number;
   bracelet?: number;

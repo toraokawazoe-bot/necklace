@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { EMPTY_SETTINGS, Order, OrderStatus, Settings } from "@/lib/types";
+import { EMPTY_SETTINGS, Order, OrderStatus, Settings, nextStatus } from "@/lib/types";
 import {
   subscribeOrders,
   subscribeSettings,
@@ -40,6 +40,26 @@ const FILTERS: { label: string; value: Filter }[] = [
   { label: "失注", value: "失注" },
 ];
 
+// 顧客名・現在/過去の@username・デザイン・メモ・種別・支払い・長さを横断検索する。
+function matchesQuery(order: Order, q: string): boolean {
+  if (!q) return true;
+  const hay = [
+    order.customer,
+    order.igUsername,
+    ...(order.igUsernameHistory?.map((h) => h.username) ?? []),
+    order.design,
+    order.memo,
+    order.type,
+    order.payment,
+    order.length,
+    order.status,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return hay.includes(q.toLowerCase());
+}
+
 export default function Home() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [settings, setSettings] = useState<Settings>(EMPTY_SETTINGS);
@@ -51,6 +71,7 @@ export default function Home() {
   const [loaded, setLoaded] = useState(false);
   const [migrationNotice, setMigrationNotice] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     let unsubOrders: (() => void) | undefined;
@@ -117,6 +138,31 @@ export default function Home() {
     setShowSettings(false);
   };
 
+  // カードからステータスを1段階進める（モーダルを開かずに）。
+  // 「完了」は売上計上＆着金日スタンプが走るため、誤タップ防止に確認を挟む。
+  const handleAdvance = async (order: Order) => {
+    const next = nextStatus(order.status);
+    if (!next) return;
+    if (
+      next === "完了" &&
+      !confirm("「完了」にすると売上（着金）に計上されます。よろしいですか？")
+    ) {
+      return;
+    }
+    await saveOrder({ ...order, status: next });
+  };
+
+  // フィルタタブに出す件数（検索語があれば検索結果ベースで数える）。
+  const countSource = useMemo(
+    () => orders.filter((o) => matchesQuery(o, search.trim())),
+    [orders, search]
+  );
+  const statusCounts = useMemo(() => {
+    const m: Record<string, number> = { all: countSource.length };
+    for (const o of countSource) m[o.status] = (m[o.status] ?? 0) + 1;
+    return m;
+  }, [countSource]);
+
   const inboxCount = orders.filter((o) => o.status === "受信トレイ").length;
   const progressCount = orders.filter((o) =>
     ["問い合わせ中", "制作中", "支払い待ち", "発送待ち"].includes(o.status)
@@ -143,8 +189,10 @@ export default function Home() {
     [orders, avgDays]
   );
 
-  const filtered =
-    filter === "all" ? orders : orders.filter((o) => o.status === filter);
+  const q = search.trim();
+  const filtered = orders.filter(
+    (o) => (filter === "all" || o.status === filter) && matchesQuery(o, q)
+  );
 
   const sorted = [...filtered].sort((a, b) => {
     const aOver = isOverdue(a, avgDays) ? 1 : 0;
@@ -270,22 +318,55 @@ export default function Home() {
         <span>DMきた（受信トレイに追加）</span>
       </button>
 
-      <div className={styles.filters}>
-        {FILTERS.map((f) => (
+      <div className={styles.searchWrap}>
+        <input
+          className={styles.search}
+          type="search"
+          inputMode="search"
+          placeholder="🔍 名前・@ID・デザイン・メモで検索"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        {search && (
           <button
-            key={f.value}
-            className={`${styles.filterBtn} ${filter === f.value ? styles.filterActive : ""}`}
-            onClick={() => setFilter(f.value)}
+            type="button"
+            className={styles.searchClear}
+            onClick={() => setSearch("")}
+            aria-label="検索をクリア"
           >
-            {f.label}
+            ×
           </button>
-        ))}
+        )}
       </div>
+
+      <div className={styles.filters}>
+        {FILTERS.map((f) => {
+          const n = statusCounts[f.value] ?? 0;
+          return (
+            <button
+              key={f.value}
+              className={`${styles.filterBtn} ${filter === f.value ? styles.filterActive : ""}`}
+              onClick={() => setFilter(f.value)}
+            >
+              {f.label}
+              <span className={styles.filterCount}>{n}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {q && (
+        <div className={styles.searchHint}>
+          「{q}」で絞り込み中：{filtered.length}件（タブの数字も検索結果ベース）
+        </div>
+      )}
 
       {loaded && sorted.length === 0 && (
         <div className={styles.empty}>
           {orders.length === 0
             ? "DMがきたら上の「📥」ボタンから素早く記録してね"
+            : q
+            ? "検索に一致するオーダーはありません"
             : "このステータスのオーダーはありません"}
         </div>
       )}
@@ -298,6 +379,7 @@ export default function Home() {
             settings={settings}
             avgDays={avgDays}
             onClick={() => setEditing(order)}
+            onAdvance={() => handleAdvance(order)}
           />
         ))}
       </div>
