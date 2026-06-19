@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDoc,
   setDoc,
   deleteDoc,
   onSnapshot,
@@ -16,6 +17,8 @@ const ORDERS_COL = "orders";
 const IG_MESSAGES_COL = "ig_messages";
 const SETTINGS_COL = "settings";
 const SETTINGS_DOC = "main";
+const META_COL = "meta";
+const SEED_META_DOC = "seed";
 const LEGACY_LS_KEY = "necklace_orders_v1";
 const LEGACY_LS_MIGRATED_FLAG = "necklace_orders_v1_migrated";
 
@@ -66,6 +69,19 @@ export async function mergeSeedOrders(seedOrders: Order[]): Promise<void> {
     batch.set(doc(db, ORDERS_COL, order.id), order);
   }
   await batch.commit();
+}
+
+// シード（＝初期の実受注データ）は「一度だけ」投入する。毎回マージすると、
+// ユーザーが不要なカードを削除しても次回ロードで復活してしまうため、
+// meta/seed の imported フラグで一度きりに制限し、以後は削除・編集を定着させる。
+export async function mergeSeedOrdersOnce(seedOrders: Order[]): Promise<void> {
+  const flagRef = doc(db, META_COL, SEED_META_DOC);
+  const flagSnap = await getDoc(flagRef);
+  if (flagSnap.exists() && (flagSnap.data() as { imported?: boolean }).imported) {
+    return;
+  }
+  await mergeSeedOrders(seedOrders);
+  await setDoc(flagRef, { imported: true, at: Date.now() });
 }
 
 export async function migrateLegacyLocalOrders(): Promise<number> {

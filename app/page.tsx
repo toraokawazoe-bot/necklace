@@ -8,7 +8,7 @@ import {
   saveOrder,
   saveSettings,
   deleteOrder,
-  mergeSeedOrders,
+  mergeSeedOrdersOnce,
   migrateLegacyLocalOrders,
   createEmptyOrder,
 } from "@/lib/storage";
@@ -67,8 +67,9 @@ export default function Home() {
       }
       // シード投入が失敗（オフライン・権限エラー等）しても、購読開始まで到達せず
       // 画面が無言でロード中のまま固まらないよう、ここで遮断する。
+      // 投入は一度きり（meta/seed フラグで制御）。削除/編集が次回以降も定着する。
       try {
-        await mergeSeedOrders(SEED_ORDERS);
+        await mergeSeedOrdersOnce(SEED_ORDERS);
       } catch (e) {
         console.error("seed merge failed", e);
       }
