@@ -150,6 +150,12 @@
   letter-spacing: 0.03em;
 }
 
+.noPriceWarn {
+  display: block;
+  margin-top: 2px;
+  color: var(--danger);
+}
+
 .salesMeta {
   display: flex;
   align-items: center;

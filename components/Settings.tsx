@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Order, Settings } from "@/lib/types";
 import { formatMonth, monthKey } from "@/lib/pricing";
+import { exportBackup } from "@/lib/backup";
 import styles from "./Settings.module.css";
 
 interface Props {
@@ -147,6 +148,34 @@ export default function SettingsPanel({ settings, orders, onSave, onClose }: Pro
         <div className={styles.actions}>
           <button className={styles.saveBtn} onClick={handleSave}>保存</button>
           <button className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
+        </div>
+
+        <div className={styles.backupSection}>
+          <div className={styles.backupHead}>データのバックアップ</div>
+          <p className={styles.note}>
+            注文{orders.length}件と価格設定を JSON で書き出して端末に控えを残します。
+            <br />
+            ※これは「書き出し」専用です（アプリからの自動復元は未対応。復元が必要なときは
+            この JSON を保管のうえご相談ください）。
+            <br />
+            ※価格を変更した場合は、先に「保存」してからバックアップしてください。
+            <br />
+            ※スマホで新しいタブに JSON が開いた場合は、共有→「ファイルに保存」で保存できます。
+          </p>
+          <button
+            type="button"
+            className={styles.backupBtn}
+            onClick={() => {
+              const ok = exportBackup(orders, settings);
+              alert(
+                ok
+                  ? "バックアップ用の JSON を書き出しました。"
+                  : "書き出しに失敗しました。時間をおいて再度お試しください。"
+              );
+            }}
+          >
+            ⬇ バックアップを書き出す
+          </button>
         </div>
       </div>
     </div>

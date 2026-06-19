@@ -1,9 +1,17 @@
 import { ItemType, Order, Settings } from "./types";
 
+// 月キーは実行環境のTZに依存させず Asia/Tokyo 固定で「YYYY-MM」を作る。
+// （月初・月末の深夜帯の受注が、UTC等の環境で別の月に落ちるのを防ぐ）
+const MONTH_KEY_FMT = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Asia/Tokyo",
+  year: "numeric",
+  month: "2-digit",
+});
+
 export function monthKey(ts: number): string {
-  const d = new Date(ts);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const parts = MONTH_KEY_FMT.formatToParts(new Date(ts));
+  const y = parts.find((p) => p.type === "year")?.value ?? "";
+  const m = parts.find((p) => p.type === "month")?.value ?? "";
   return `${y}-${m}`;
 }
 
@@ -42,6 +50,11 @@ export interface MonthlySummary {
   bookedAmount: number;
   paidCount: number;
   paidAmount: number;
+  // 金額未設定（priceOverride も月次デフォルトも無い）件数。集計では ¥0 扱いになる。
+  // 意図的な無料(priceOverride=0)は「設定済み」として除外。
+  // 件数はあるのに金額が足りない月に気づくための指標。
+  bookedNoPriceCount: number;
+  paidNoPriceCount: number;
 }
 
 export function summarizeMonth(
@@ -53,22 +66,35 @@ export function summarizeMonth(
   let bookedAmount = 0;
   let paidCount = 0;
   let paidAmount = 0;
+  let bookedNoPriceCount = 0;
+  let paidNoPriceCount = 0;
   for (const o of orders) {
     if (o.status === "失注") continue;
-    const price = effectivePrice(settings, o) ?? 0;
+    const ep = effectivePrice(settings, o);
+    const price = ep ?? 0;
     if (monthKey(o.created) === key) {
       bookedCount += 1;
       bookedAmount += price;
+      if (ep === undefined) bookedNoPriceCount += 1;
     }
     if (o.status === "完了") {
       const paidTs = o.completedAt ?? o.created;
       if (monthKey(paidTs) === key) {
         paidCount += 1;
         paidAmount += price;
+        if (ep === undefined) paidNoPriceCount += 1;
       }
     }
   }
-  return { monthKey: key, bookedCount, bookedAmount, paidCount, paidAmount };
+  return {
+    monthKey: key,
+    bookedCount,
+    bookedAmount,
+    paidCount,
+    paidAmount,
+    bookedNoPriceCount,
+    paidNoPriceCount,
+  };
 }
 
 const DAY_MS = 86_400_000;

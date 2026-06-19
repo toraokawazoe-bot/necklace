@@ -280,14 +280,28 @@ export default function Home() {
           <div>
             <div className={styles.salesLabel}>受注金額</div>
             <div className={styles.salesValue}>{formatYen(summary.bookedAmount)}</div>
-            <div className={styles.salesSub}>{summary.bookedCount}件</div>
+            <div className={styles.salesSub}>
+              {summary.bookedCount}件
+              {summary.bookedNoPriceCount > 0 && (
+                <span className={styles.noPriceWarn}>
+                  （うち{summary.bookedNoPriceCount}件 金額未設定）
+                </span>
+              )}
+            </div>
           </div>
           <div>
             <div className={styles.salesLabel}>うち着金</div>
             <div className={`${styles.salesValue} ${styles.salesPaid}`}>
               {formatYen(summary.paidAmount)}
             </div>
-            <div className={styles.salesSub}>{summary.paidCount}件</div>
+            <div className={styles.salesSub}>
+              {summary.paidCount}件
+              {summary.paidNoPriceCount > 0 && (
+                <span className={styles.noPriceWarn}>
+                  （うち{summary.paidNoPriceCount}件 金額未設定）
+                </span>
+              )}
+            </div>
           </div>
         </div>
         {avgDays !== null && (
