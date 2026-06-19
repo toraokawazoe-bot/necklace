@@ -77,6 +77,8 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
   const [threadLoaded, setThreadLoaded] = useState(false);
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
+  const dmThreadRef = useRef<HTMLDivElement | null>(null);
+  const threadWasLoaded = useRef(false);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -87,12 +89,35 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
 
   useEffect(() => {
     if (!isInstagram || !order.igThreadId) return;
-    const unsub = subscribeThreadMessages(order.igThreadId, (msgs) => {
-      setThread(msgs);
-      setThreadLoaded(true);
-    });
+    // スレッドが切り替わったら初回スクロール判定をリセットする。
+    threadWasLoaded.current = false;
+    const unsub = subscribeThreadMessages(
+      order.igThreadId,
+      (msgs) => {
+        setThread(msgs);
+        setThreadLoaded(true);
+      },
+      () => {
+        // 購読がエラー終了しても「読み込み中…」で固着させない。
+        // 表示済みの会話ログはクリアせず残す。
+        setThreadLoaded(true);
+      }
+    );
     return () => unsub();
   }, [isInstagram, order.igThreadId]);
+
+  // 会話ログは新しいものほど下にある。最新へ追従するが、ユーザーが過去ログを
+  // 遡って読んでいる最中（最下部から離れている）は引き戻さない。
+  useEffect(() => {
+    const el = dmThreadRef.current;
+    if (!el) return;
+    const firstLoad = !threadWasLoaded.current && thread.length > 0;
+    if (firstLoad) threadWasLoaded.current = true;
+    const nearBottom =
+      el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+    // 初回ロード時、または既にほぼ最下部にいるときだけ最新へスクロール。
+    if (firstLoad || nearBottom) el.scrollTop = el.scrollHeight;
+  }, [thread]);
 
   // 標準メッセージウィンドウ判定：最後の「受信」メッセージから24時間以内か。
   // direction 未設定の旧データは受信扱い（!== "out"）。
@@ -243,7 +268,7 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
         {isInstagram && (
           <div className={styles.field}>
             <label className={styles.label}>DM会話</label>
-            <div className={styles.dmThread}>
+            <div className={styles.dmThread} ref={dmThreadRef}>
               {!threadLoaded ? (
                 <div className={styles.dmEmpty}>読み込み中…</div>
               ) : thread.length === 0 ? (

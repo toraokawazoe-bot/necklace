@@ -19,11 +19,23 @@ const SETTINGS_DOC = "main";
 const LEGACY_LS_KEY = "necklace_orders_v1";
 const LEGACY_LS_MIGRATED_FLAG = "necklace_orders_v1_migrated";
 
-export function subscribeOrders(onData: (orders: Order[]) => void): () => void {
-  return onSnapshot(collection(db, ORDERS_COL), (snapshot) => {
-    const orders = snapshot.docs.map((d) => d.data() as Order);
-    onData(orders);
-  });
+export function subscribeOrders(
+  onData: (orders: Order[]) => void,
+  onError?: (err: unknown) => void
+): () => void {
+  return onSnapshot(
+    collection(db, ORDERS_COL),
+    (snapshot) => {
+      const orders = snapshot.docs.map((d) => d.data() as Order);
+      onData(orders);
+    },
+    (err) => {
+      // 権限エラー等で購読が止まったとき、無言で固まらないようログに残し、
+      // 呼び出し側にも通知してローディング状態を確定できるようにする。
+      console.error("[subscribeOrders] snapshot error", err);
+      onError?.(err);
+    }
+  );
 }
 
 export async function saveOrder(order: Order): Promise<void> {
@@ -105,17 +117,28 @@ export async function migrateLegacyLocalOrders(): Promise<number> {
 // where + orderBy の複合インデックスを避けるため、並べ替えはクライアント側で行う。
 export function subscribeThreadMessages(
   threadId: string,
-  onData: (messages: IgMessageDoc[]) => void
+  onData: (messages: IgMessageDoc[]) => void,
+  onError?: (err: unknown) => void
 ): () => void {
   const q = query(
     collection(db, IG_MESSAGES_COL),
     where("threadId", "==", threadId)
   );
-  return onSnapshot(q, (snapshot) => {
-    const messages = snapshot.docs.map((d) => d.data() as IgMessageDoc);
-    messages.sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
-    onData(messages);
-  });
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const messages = snapshot.docs.map((d) => d.data() as IgMessageDoc);
+      messages.sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
+      onData(messages);
+    },
+    (err) => {
+      // エラーを通知して呼び出し側でローディングを解除できるようにする。
+      // ここで onData([]) を呼ぶと表示済みの会話ログを空に巻き戻してしまうため、
+      // 既存メッセージはそのまま残し、ローディング状態の確定は呼び出し側に任せる。
+      console.error("[subscribeThreadMessages] snapshot error", err);
+      onError?.(err);
+    }
+  );
 }
 
 export function subscribeSettings(

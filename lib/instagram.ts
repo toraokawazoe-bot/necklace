@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, runTransaction, increment } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Order } from "@/lib/types";
 
@@ -98,12 +98,21 @@ async function resolveUsername(igsid: string): Promise<string | null> {
         igsid
       )}?fields=username,name&access_token=${encodeURIComponent(token)}`
     );
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // トークン失効(190)・権限不足・レート制限などをここで握り潰すと
+      // 「IG:<番号>」表示に化けて原因が分からなくなるため、必ずログに残す。
+      // ※ URL にトークンが入るので URL 自体はログしない。
+      console.error(
+        `[instagram resolveUsername] failed status=${res.status} igsid=${igsid}`
+      );
+      return null;
+    }
     const j = (await res.json()) as { username?: string; name?: string };
     if (j.username) return `@${j.username}`;
     if (j.name) return j.name;
     return null;
-  } catch {
+  } catch (e) {
+    console.error(`[instagram resolveUsername] network error igsid=${igsid}`, e);
     return null;
   }
 }
@@ -155,6 +164,12 @@ export async function sendInstagramMessage(
       error?: SendError;
     };
     if (!res.ok) {
+      // Graph のエラー本体（code/error_subcode/message）をサーバーログに残す。
+      // トークンは含めない（error 本体に token は入らない）。
+      console.error(
+        `[instagram send] failed status=${res.status}`,
+        j.error ?? "no_error_body"
+      );
       return {
         ok: false,
         status: res.status,
@@ -166,7 +181,8 @@ export async function sendInstagramMessage(
       messageId: j.message_id ?? "",
       recipientId: j.recipient_id ?? recipientId,
     };
-  } catch {
+  } catch (e) {
+    console.error("[instagram send] network error", e);
     return { ok: false, status: 502, error: { code: "network" } };
   }
 }
@@ -194,7 +210,11 @@ async function processIncomingMessage(
 
   const summary = summarizeMessage(m);
 
-  await setDoc(msgRef, {
+  // メッセージ本体（兼・冪等マーカー）はこの時点では書かない。
+  // 受注カード／会話の作成が失敗したのに mid だけ先に記録されると、Meta の再送が
+  // already.exists() で弾かれ、その DM が二度とカード化されず無言で取りこぼされる。
+  // → カード／会話を確定させた「後」に、最後に書く（下部の setDoc(msgRef) 参照）。
+  const messageDoc = {
     id: mid,
     threadId: senderId,
     senderId,
@@ -207,8 +227,8 @@ async function processIncomingMessage(
     })),
     ts,
     createdAt: Date.now(),
-    direction: "in",
-  });
+    direction: "in" as const,
+  };
 
   // スレッド（= 送信者）ごとに受注カードは 1 枚だけ作る。
   // 2 通目以降は会話メタの更新のみ。既存カードの手動編集は一切上書きしない。
@@ -216,37 +236,60 @@ async function processIncomingMessage(
   const convSnap = await getDoc(convRef);
 
   if (!convSnap.exists()) {
+    // スレッドの初回メッセージ。受注カードと会話ドキュメントをトランザクションで
+    // 原子的に作成し、同一送信者の初回 DM が並行到着してもカードが二重に立たない
+    // ようにする（getDoc→setDoc の TOCTOU を塞ぐ）。
+    // ※ 通信（ユーザーネーム取得）はトランザクション外で行う。トランザクション関数は
+    //   競合時に再実行されうるため、副作用のあるネットワーク呼び出しを入れない。
     const handle = await resolveUsername(senderId); // "@xxx" | 表示名 | null
     const customer = handle ?? `IG:${senderId}`;
     const orderId = `o_ig_${senderId}_${ts}`;
-    const order: Order = {
-      id: orderId,
-      created: ts,
-      customer,
-      type: "",
-      length: "",
-      design: "",
-      payment: "",
-      status: "受信トレイ",
-      memo: `【Instagram DM】\n${summary}`,
-      source: "instagram",
-      igThreadId: senderId,
-      igSenderId: senderId,
-      ...(handle ? { igUsername: handle } : {}),
-    };
-    await setDoc(doc(db, ORDERS, orderId), order);
-    await setDoc(convRef, {
-      threadId: senderId,
-      orderId,
-      customer,
-      igUsername: handle ?? "",
-      igUsernameCheckedAt: Date.now(),
-      igUsernameHistory: [],
-      lastText: summary,
-      lastTs: ts,
-      messageCount: 1,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+    await runTransaction(db, async (tx) => {
+      const fresh = await tx.get(convRef);
+      if (fresh.exists()) {
+        // 競合した別イベントが先に会話を作成済み。カードは作らずメタだけ更新する。
+        // messageCount は else 経路と揃えて原子インクリメントで数える。
+        tx.set(
+          convRef,
+          {
+            lastText: summary,
+            lastTs: ts,
+            messageCount: increment(1),
+            updatedAt: Date.now(),
+          },
+          { merge: true }
+        );
+        return;
+      }
+      const order: Order = {
+        id: orderId,
+        created: ts,
+        customer,
+        type: "",
+        length: "",
+        design: "",
+        payment: "",
+        status: "受信トレイ",
+        memo: `【Instagram DM】\n${summary}`,
+        source: "instagram",
+        igThreadId: senderId,
+        igSenderId: senderId,
+        ...(handle ? { igUsername: handle } : {}),
+      };
+      tx.set(doc(db, ORDERS, orderId), order);
+      tx.set(convRef, {
+        threadId: senderId,
+        orderId,
+        customer,
+        igUsername: handle ?? "",
+        igUsernameCheckedAt: Date.now(),
+        igUsernameHistory: [],
+        lastText: summary,
+        lastTs: ts,
+        messageCount: 1,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
     });
   } else {
     const data = convSnap.data() as {
@@ -260,7 +303,9 @@ async function processIncomingMessage(
     const convUpdate: Record<string, unknown> = {
       lastText: summary,
       lastTs: ts,
-      messageCount: (data.messageCount ?? 0) + 1,
+      // 同一スレッドの 2 通目以降が並行到着しても取りこぼさないよう、
+      // read-modify-write ではなくサーバー側の原子インクリメントで数える。
+      messageCount: increment(1),
       updatedAt: Date.now(),
     };
 
@@ -310,6 +355,13 @@ async function processIncomingMessage(
 
     await setDoc(convRef, convUpdate, { merge: true });
   }
+
+  // カード／会話が確定したので、最後にメッセージ本体（兼・冪等マーカー）を書く。
+  // ここまでで例外が出ていれば mid は未記録のままなので、Meta の再送で再処理される。
+  // ※ この設計上、ごく稀（会話更新の成功後〜この書き込みの間でクラッシュ）に再処理が
+  //   走ると messageCount が二重加算されうる。messageCount は表示専用の目安であり、
+  //   「無言の取りこぼし」を避けるためのトレードオフとして許容する。
+  await setDoc(msgRef, messageDoc);
 }
 
 /** Webhook の POST ボディを処理する。Instagram 以外のイベントは無視。 */
@@ -318,7 +370,12 @@ export async function handleInstagramEvent(body: IgWebhookBody): Promise<void> {
   for (const entry of body.entry) {
     const events = entry.messaging ?? [];
     for (const ev of events) {
-      await processIncomingMessage(entry.id ?? "", ev);
+      // 1 イベントの失敗で同一バッチの後続メッセージを巻き込まないよう、個別に隔離する。
+      try {
+        await processIncomingMessage(entry.id ?? "", ev);
+      } catch (e) {
+        console.error("[instagram event] processing failed", e);
+      }
     }
   }
 }

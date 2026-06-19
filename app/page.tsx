@@ -49,6 +49,7 @@ export default function Home() {
   const [viewMonthOffset, setViewMonthOffset] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [migrationNotice, setMigrationNotice] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     let unsubOrders: (() => void) | undefined;
@@ -64,11 +65,25 @@ export default function Home() {
       } catch (e) {
         console.error("legacy migration failed", e);
       }
-      await mergeSeedOrders(SEED_ORDERS);
-      unsubOrders = subscribeOrders((data) => {
-        setOrders(data);
-        setLoaded(true);
-      });
+      // シード投入が失敗（オフライン・権限エラー等）しても、購読開始まで到達せず
+      // 画面が無言でロード中のまま固まらないよう、ここで遮断する。
+      try {
+        await mergeSeedOrders(SEED_ORDERS);
+      } catch (e) {
+        console.error("seed merge failed", e);
+      }
+      unsubOrders = subscribeOrders(
+        (data) => {
+          setOrders(data);
+          setLoaded(true);
+          setLoadError(false);
+        },
+        () => {
+          // 購読が権限/ネット断で止まっても、空のまま無言で固まらないよう確定させる。
+          setLoaded(true);
+          setLoadError(true);
+        }
+      );
     })();
 
     const unsubSettings = subscribeSettings((s) => setSettings(s));
@@ -148,6 +163,11 @@ export default function Home() {
             onClick={() => setMigrationNotice(null)}
             aria-label="閉じる"
           >×</button>
+        </div>
+      )}
+      {loadError && (
+        <div className={styles.loadError}>
+          <span>⚠️ データの読み込みに失敗しました。通信状況を確認して再読み込みしてください。</span>
         </div>
       )}
       <header className={styles.header}>
