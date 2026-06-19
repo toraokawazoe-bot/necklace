@@ -1,7 +1,10 @@
 import crypto from "crypto";
-import { doc, getDoc, setDoc, runTransaction, increment } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { FieldValue } from "firebase-admin/firestore";
+import { getAdminDb } from "@/lib/firebaseAdmin";
 import { Order } from "@/lib/types";
+
+// このファイルはサーバー専用。Firestore セキュリティルールを認証必須に締めても
+// webhook（Meta から来る・Firebase 認証なし）が書けるよう、Admin SDK を使う。
 
 // 既存の orders / settings には手を加えず、DM は専用コレクションに保存する。
 const IG_MESSAGES = "ig_messages";
@@ -203,10 +206,12 @@ async function processIncomingMessage(
   const ts = msg.timestamp ?? Date.now();
   const mid = m.mid ?? `${senderId}_${ts}`;
 
+  const db = getAdminDb();
+
   // 冪等性: 同じメッセージ ID を二重処理しない（Meta は失敗時に再送する）
-  const msgRef = doc(db, IG_MESSAGES, mid);
-  const already = await getDoc(msgRef);
-  if (already.exists()) return;
+  const msgRef = db.collection(IG_MESSAGES).doc(mid);
+  const already = await msgRef.get();
+  if (already.exists) return;
 
   const summary = summarizeMessage(m);
 
@@ -232,10 +237,10 @@ async function processIncomingMessage(
 
   // スレッド（= 送信者）ごとに受注カードは 1 枚だけ作る。
   // 2 通目以降は会話メタの更新のみ。既存カードの手動編集は一切上書きしない。
-  const convRef = doc(db, IG_CONVERSATIONS, senderId);
-  const convSnap = await getDoc(convRef);
+  const convRef = db.collection(IG_CONVERSATIONS).doc(senderId);
+  const convSnap = await convRef.get();
 
-  if (!convSnap.exists()) {
+  if (!convSnap.exists) {
     // スレッドの初回メッセージ。受注カードと会話ドキュメントをトランザクションで
     // 原子的に作成し、同一送信者の初回 DM が並行到着してもカードが二重に立たない
     // ようにする（getDoc→setDoc の TOCTOU を塞ぐ）。
@@ -244,9 +249,9 @@ async function processIncomingMessage(
     const handle = await resolveUsername(senderId); // "@xxx" | 表示名 | null
     const customer = handle ?? `IG:${senderId}`;
     const orderId = `o_ig_${senderId}_${ts}`;
-    await runTransaction(db, async (tx) => {
+    await db.runTransaction(async (tx) => {
       const fresh = await tx.get(convRef);
-      if (fresh.exists()) {
+      if (fresh.exists) {
         // 競合した別イベントが先に会話を作成済み。カードは作らずメタだけ更新する。
         // messageCount は else 経路と揃えて原子インクリメントで数える。
         tx.set(
@@ -254,7 +259,7 @@ async function processIncomingMessage(
           {
             lastText: summary,
             lastTs: ts,
-            messageCount: increment(1),
+            messageCount: FieldValue.increment(1),
             updatedAt: Date.now(),
           },
           { merge: true }
@@ -276,7 +281,7 @@ async function processIncomingMessage(
         igSenderId: senderId,
         ...(handle ? { igUsername: handle } : {}),
       };
-      tx.set(doc(db, ORDERS, orderId), order);
+      tx.set(db.collection(ORDERS).doc(orderId), order);
       tx.set(convRef, {
         threadId: senderId,
         orderId,
@@ -305,7 +310,7 @@ async function processIncomingMessage(
       lastTs: ts,
       // 同一スレッドの 2 通目以降が並行到着しても取りこぼさないよう、
       // read-modify-write ではなくサーバー側の原子インクリメントで数える。
-      messageCount: increment(1),
+      messageCount: FieldValue.increment(1),
       updatedAt: Date.now(),
     };
 
@@ -327,13 +332,13 @@ async function processIncomingMessage(
         // 受注カードにも反映する。ただし表示名（customer）は owner が手で
         // 編集している場合があるので、自動取得値のままのときだけ追従する。
         if (data.orderId) {
-          const orderRef = doc(db, ORDERS, data.orderId);
+          const orderRef = db.collection(ORDERS).doc(data.orderId);
           const orderUpdate: Record<string, unknown> = {
             igUsername: handle,
             igUsernameHistory: nextHistory,
           };
-          const orderSnap = await getDoc(orderRef);
-          const orderData = orderSnap.exists()
+          const orderSnap = await orderRef.get();
+          const orderData = orderSnap.exists
             ? (orderSnap.data() as Order)
             : null;
           // owner が表示名を変えていない（旧ユーザーネーム / IGSID フォールバック /
@@ -348,12 +353,12 @@ async function processIncomingMessage(
             orderUpdate.customer = handle;
             convUpdate.customer = handle;
           }
-          await setDoc(orderRef, orderUpdate, { merge: true });
+          await orderRef.set(orderUpdate, { merge: true });
         }
       }
     }
 
-    await setDoc(convRef, convUpdate, { merge: true });
+    await convRef.set(convUpdate, { merge: true });
   }
 
   // カード／会話が確定したので、最後にメッセージ本体（兼・冪等マーカー）を書く。
@@ -361,7 +366,7 @@ async function processIncomingMessage(
   // ※ この設計上、ごく稀（会話更新の成功後〜この書き込みの間でクラッシュ）に再処理が
   //   走ると messageCount が二重加算されうる。messageCount は表示専用の目安であり、
   //   「無言の取りこぼし」を避けるためのトレードオフとして許容する。
-  await setDoc(msgRef, messageDoc);
+  await msgRef.set(messageDoc);
 }
 
 /** Webhook の POST ボディを処理する。Instagram 以外のイベントは無視。 */

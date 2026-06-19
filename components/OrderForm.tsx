@@ -11,6 +11,7 @@ import {
   IgMessageDoc,
 } from "@/lib/types";
 import { formatDate, formatDateTime, subscribeThreadMessages } from "@/lib/storage";
+import { getIdToken, logout } from "@/lib/authClient";
 import { compressImage } from "@/lib/image";
 import { defaultPrice, formatYen } from "@/lib/pricing";
 import styles from "./OrderForm.module.css";
@@ -138,15 +139,26 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
     if (!order.igThreadId || !text || sending || replyTooLong) return;
     setSending(true);
     try {
+      // 認証有効時は ID トークンを添えて、送信 API 側で本人確認できるようにする。
+      // 失効していることがあるため強制リフレッシュ（true）で取得する。
+      const idToken = await getIdToken(true);
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (idToken) headers.Authorization = `Bearer ${idToken}`;
       const res = await fetch("/api/instagram/send", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ recipientId: order.igThreadId, text }),
       });
       const data = await res.json().catch(() => null);
       if (res.ok && data?.ok) {
         // 送信メッセージは onSnapshot 経由でバブルとして自動表示される
         setReply("");
+      } else if (res.status === 401) {
+        // セッション切れ。再ログインを促し、ログイン画面へ戻す。
+        alert("セッションが切れました。再度ログインしてください。");
+        await logout().catch(() => {});
       } else {
         alert(igErrorMessage(data));
       }

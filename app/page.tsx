@@ -20,6 +20,7 @@ import {
   monthKey,
   summarizeMonth,
 } from "@/lib/pricing";
+import { REQUIRE_AUTH, logout } from "@/lib/authClient";
 import OrderCard from "@/components/OrderCard";
 import OrderForm from "@/components/OrderForm";
 import SettingsPanel from "@/components/Settings";
@@ -189,6 +190,15 @@ export default function Home() {
           >
             ⚙
           </button>
+          {REQUIRE_AUTH && (
+            <button
+              className={styles.settingsBtn}
+              onClick={() => logout()}
+              aria-label="ログアウト"
+            >
+              🔓
+            </button>
+          )}
         </div>
       </header>
 

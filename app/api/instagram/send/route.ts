@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
-import { doc, setDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { sendInstagramMessage } from "@/lib/instagram";
+import { getAdminDb, getAdminAuth } from "@/lib/firebaseAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,6 +11,10 @@ const IG_CONVERSATIONS = "ig_conversations";
 // テキストDMの上限（Send API の仕様）
 const MAX_TEXT_BYTES = 1000;
 
+// 認証を必須にするか（運用者ログイン導入後に NEXT_PUBLIC_REQUIRE_AUTH=1 で有効化）。
+// 有効時はブラウザの Firebase ID トークンを検証し、運用者本人の送信のみ許可する。
+const REQUIRE_AUTH = process.env.NEXT_PUBLIC_REQUIRE_AUTH === "1";
+
 /**
  * DM 返信の送信（POST）。
  * body: { recipientId: string(IGSID), text: string }
@@ -20,6 +23,35 @@ const MAX_TEXT_BYTES = 1000;
  * （失敗時に「幻の送信バブル」を残さないため）。
  */
 export async function POST(req: NextRequest) {
+  // 認証チェック（有効時のみ）。誰でもショップ名義で DM 送信できないようにする。
+  if (REQUIRE_AUTH) {
+    const authz = req.headers.get("authorization") ?? "";
+    const idToken = authz.startsWith("Bearer ") ? authz.slice(7).trim() : "";
+    if (!idToken) {
+      return Response.json(
+        { ok: false, error: { code: "unauthorized" } },
+        { status: 401 }
+      );
+    }
+    try {
+      const decoded = await getAdminAuth().verifyIdToken(idToken);
+      // OWNER_UID を設定しておくと、運用者本人以外の認証ユーザー（自前サインアップ等）を弾ける。
+      // 未設定なら「認証済みなら誰でも」になるので、本番では設定推奨。
+      const ownerUid = process.env.OWNER_UID;
+      if (ownerUid && decoded.uid !== ownerUid) {
+        return Response.json(
+          { ok: false, error: { code: "forbidden" } },
+          { status: 403 }
+        );
+      }
+    } catch {
+      return Response.json(
+        { ok: false, error: { code: "unauthorized" } },
+        { status: 401 }
+      );
+    }
+  }
+
   let body: { recipientId?: unknown; text?: unknown };
   try {
     body = await req.json();
@@ -61,7 +93,8 @@ export async function POST(req: NextRequest) {
   const now = Date.now();
   const id = result.messageId || `out_${recipientId}_${now}`;
   try {
-    await setDoc(doc(db, IG_MESSAGES, id), {
+    const db = getAdminDb();
+    await db.collection(IG_MESSAGES).doc(id).set({
       id,
       threadId: recipientId,
       senderId: "",
@@ -74,11 +107,10 @@ export async function POST(req: NextRequest) {
       direction: "out",
     });
     // 受信側の lastText/lastTs は上書きしない（受信プレビューの意味を保つため、out 専用フィールドに記録）。
-    await setDoc(
-      doc(db, IG_CONVERSATIONS, recipientId),
-      { lastOutText: text, lastOutTs: now, updatedAt: now },
-      { merge: true }
-    );
+    await db
+      .collection(IG_CONVERSATIONS)
+      .doc(recipientId)
+      .set({ lastOutText: text, lastOutTs: now, updatedAt: now }, { merge: true });
   } catch (e) {
     // 送信自体は成功しているので 200 を返す。記録の失敗だけログに残す。
     console.error("[instagram send] firestore write failed", e);

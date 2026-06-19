@@ -4,6 +4,7 @@ import {
   verifyInstagramSignature,
   IgWebhookBody,
 } from "@/lib/instagram";
+import { isAdminConfigured } from "@/lib/firebaseAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,6 +52,17 @@ export async function POST(req: NextRequest) {
     body = JSON.parse(raw) as IgWebhookBody;
   } catch {
     return new Response("Bad Request", { status: 400 });
+  }
+
+  // サービスアカウント鍵が未設定だと Admin SDK で書けず DM を保存できない。
+  // ここで 200 を返すと Meta が再送しないため、その間の DM が恒久的に取りこぼされる。
+  // 「設定不備」は一過性ではないが、503 を返して再送させれば、鍵を入れた後の再送で
+  // 救える（mid も未記録なので二重にもならない）。処理中の例外のみ 200 で握り潰す。
+  if (!isAdminConfigured()) {
+    console.error(
+      "[instagram webhook] FIREBASE_SERVICE_ACCOUNT 未設定のため処理できません。503 を返して再送を促します。"
+    );
+    return new Response("Service Unavailable", { status: 503 });
   }
 
   try {
