@@ -59,8 +59,8 @@ export function trackingUrl(
     case "japanpost_clickpost":
     case "japanpost_yupacket":
     case "japanpost_yupack":
-    case "japanpost_letter":
       return `https://trackings.post.japanpost.jp/services/srv/search/direct?reqCodeNo1=${tn}&locale=ja`;
+    // japanpost_letter（定形外郵便）は追跡番号がないので default→null（ラベルの「追跡なし」と整合）。
     case "yamato":
       return `https://toi.kuronekoyamato.co.jp/cgi-bin/tneko?number01=${tn}`;
     case "sagawa":

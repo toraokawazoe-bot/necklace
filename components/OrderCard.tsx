@@ -1,6 +1,6 @@
 "use client";
 
-import { Order, OrderStatus, Settings, nextStatus } from "@/lib/types";
+import { Order, OrderStatus, Settings, nextStatus, carrierLabel } from "@/lib/types";
 import { formatDate } from "@/lib/storage";
 import { effectivePrice, elapsedDays, formatYen, isOverdue } from "@/lib/pricing";
 import styles from "./OrderCard.module.css";
@@ -109,7 +109,10 @@ export default function OrderCard({
           </span>
         )}
         {order.shippedAt && (
-          <span className={styles.shipped}>📦 {formatDate(order.shippedAt)} 発送済</span>
+          <span className={styles.shipped}>
+            📦 {formatDate(order.shippedAt)} 発送済
+            {order.carrier ? `・${carrierLabel(order.carrier)}` : ""}
+          </span>
         )}
         {next && (
           <button

@@ -11,6 +11,74 @@ export type ItemType = "ネックレス" | "ブレスレット" | "";
 
 export type PaymentMethod = "PayPay" | "銀行振込" | "その他" | "";
 
+// 配送業者。追跡URL生成・通知文に使う（storefront の Carrier 型と整合）。
+export type Carrier =
+  | "japanpost_clickpost"
+  | "japanpost_yupacket"
+  | "japanpost_yupack"
+  | "japanpost_letter"
+  | "yamato"
+  | "sagawa"
+  | "other"
+  | "";
+
+// 配送業者ドロップダウンの選択肢（storefront の ShipControls と整合）。
+// 空欄（未選択）は select 側の固定 option で扱い、ここには含めない。
+export const CARRIER_OPTIONS: { value: Exclude<Carrier, "">; label: string }[] = [
+  { value: "japanpost_clickpost", label: "クリックポスト" },
+  { value: "japanpost_yupacket", label: "ゆうパケット" },
+  { value: "japanpost_yupack", label: "ゆうパック" },
+  { value: "japanpost_letter", label: "定形外郵便（追跡なし）" },
+  { value: "yamato", label: "ヤマト運輸" },
+  { value: "sagawa", label: "佐川急便" },
+  { value: "other", label: "その他" },
+];
+
+// 配送業者の短い表示名。storefront の carrierLabel と整合（未選択は "—"）。
+export function carrierLabel(carrier: Carrier | undefined): string {
+  switch (carrier) {
+    case "japanpost_clickpost":
+      return "クリックポスト";
+    case "japanpost_yupacket":
+      return "ゆうパケット";
+    case "japanpost_yupack":
+      return "ゆうパック";
+    case "japanpost_letter":
+      return "定形外郵便";
+    case "yamato":
+      return "ヤマト運輸";
+    case "sagawa":
+      return "佐川急便";
+    case "other":
+      return "その他";
+    default:
+      return "—";
+  }
+}
+
+// 配送業者＋追跡番号から各社の追跡ページURLを生成。番号なし・追跡非対応は null。
+// storefront の trackingUrl と整合。
+export function trackingUrl(
+  carrier: Carrier | undefined,
+  trackingNumber: string | undefined,
+): string | null {
+  if (!trackingNumber) return null;
+  const tn = encodeURIComponent(trackingNumber);
+  switch (carrier) {
+    case "japanpost_clickpost":
+    case "japanpost_yupacket":
+    case "japanpost_yupack":
+      return `https://trackings.post.japanpost.jp/services/srv/search/direct?reqCodeNo1=${tn}&locale=ja`;
+    // japanpost_letter（定形外郵便）は追跡番号がないので default→null（ラベルの「追跡なし」と整合）。
+    case "yamato":
+      return `https://toi.kuronekoyamato.co.jp/cgi-bin/tneko?number01=${tn}`;
+    case "sagawa":
+      return `https://k2k.sagawa-exp.co.jp/p/web/okurijostate?okurijoNo=${tn}`;
+    default:
+      return null;
+  }
+}
+
 export interface Order {
   id: string;
   created: number;
@@ -44,6 +112,7 @@ export interface Order {
   postalCode?: string;
   address?: string;
   phone?: string;
+  carrier?: Carrier; // 配送業者（追跡URL生成・通知文に使う）
   trackingNumber?: string; // 追跡番号（「届いた?」に即答するため）
   shippedAt?: number; // 発送日。completedAt（着金/完了）とは別軸
 }

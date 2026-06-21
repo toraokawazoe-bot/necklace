@@ -171,6 +171,22 @@
   background: var(--bg-secondary);
 }
 
+.trackLink {
+  align-self: flex-start;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  text-decoration: none;
+}
+
+.trackLink:active {
+  background: var(--bg-secondary);
+}
+
 .shipRow {
   display: flex;
   align-items: center;

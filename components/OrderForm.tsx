@@ -6,6 +6,9 @@ import {
   ItemType,
   PaymentMethod,
   OrderStatus,
+  Carrier,
+  CARRIER_OPTIONS,
+  trackingUrl,
   Settings,
   STATUS_LIST,
   IgMessageDoc,
@@ -78,6 +81,7 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
   const [postalCode, setPostalCode] = useState(order.postalCode ?? "");
   const [address, setAddress] = useState(order.address ?? "");
   const [phone, setPhone] = useState(order.phone ?? "");
+  const [carrier, setCarrier] = useState<Carrier>(order.carrier ?? "");
   const [trackingNumber, setTrackingNumber] = useState(order.trackingNumber ?? "");
   const [shippedAt, setShippedAt] = useState<number | undefined>(order.shippedAt);
   const [addrCopied, setAddrCopied] = useState(false);
@@ -237,6 +241,9 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
     setOrDelete("address", address);
     setOrDelete("phone", phone);
     setOrDelete("trackingNumber", trackingNumber);
+    // 配送業者：未選択（""）はキー自体を消す。
+    if (carrier) next.carrier = carrier;
+    else delete next.carrier;
     if (typeof shippedAt === "number") next.shippedAt = shippedAt;
     else delete next.shippedAt;
     onSave(next);
@@ -270,6 +277,9 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
       onDelete(order.id);
     }
   };
+
+  // 追跡URL（業者＋番号が揃ったときだけ非null）。リンク表示の判定とhrefで使い回す。
+  const trackUrl = trackingUrl(carrier, trackingNumber.trim());
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -598,6 +608,17 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
             onChange={(e) => setPhone(e.target.value)}
             autoComplete="off"
           />
+          <select
+            value={carrier}
+            onChange={(e) => setCarrier(e.target.value as Carrier)}
+          >
+            <option value="">配送業者を選択</option>
+            {CARRIER_OPTIONS.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
           <input
             type="text"
             placeholder="追跡番号"
@@ -605,6 +626,16 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
             onChange={(e) => setTrackingNumber(e.target.value)}
             autoComplete="off"
           />
+          {trackUrl && (
+            <a
+              className={styles.trackLink}
+              href={trackUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              🔍 追跡ページを開く
+            </a>
+          )}
           <div className={styles.shipRow}>
             {shippedAt ? (
               <>
