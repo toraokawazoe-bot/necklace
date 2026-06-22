@@ -11,6 +11,8 @@ import {
   mergeSeedOrdersOnce,
   migrateLegacyLocalOrders,
   createEmptyOrder,
+  backfillOrderNos,
+  allocateOrderNo,
 } from "@/lib/storage";
 import { SEED_ORDERS } from "@/lib/seedData";
 import {
@@ -95,6 +97,13 @@ export default function Home() {
       } catch (e) {
         console.error("seed merge failed", e);
       }
+      // 旧データへの受注通し番号の採番（初回のみ）。subscribe より前に await して
+      // 完了させることで、UI 操作（新規追加の採番）が走る前にカウンタを確定させる。
+      try {
+        await backfillOrderNos();
+      } catch (e) {
+        console.error("orderNo backfill failed", e);
+      }
       unsubOrders = subscribeOrders(
         (data) => {
           setOrders(data);
@@ -118,7 +127,19 @@ export default function Home() {
   }, []);
 
   const handleQuickAdd = async () => {
+    // 初期化（採番カウンタの確定）が終わる前は追加させない。ここを通すと
+    // カウンタ未初期化のまま採番が走り、採番順が受注順とズレる恐れがある。
+    if (!loaded) return;
     const newOrder = createEmptyOrder();
+    // 受注順を一目で追えるよう、作成時に固定の通し番号を振る。採番できなくても
+    // （カウンタ未初期化など）追加は止めず、番号は次回ロードの backfill が拾う。
+    // undefined を代入すると Firestore が弾くので、数値が返ったときだけ入れる。
+    try {
+      const no = await allocateOrderNo();
+      if (no != null) newOrder.orderNo = no;
+    } catch (e) {
+      console.error("allocateOrderNo failed", e);
+    }
     await saveOrder(newOrder);
     setEditing(newOrder);
   };
@@ -200,7 +221,9 @@ export default function Home() {
     if (aOver !== bOver) return bOver - aOver;
     if (a.status === "受信トレイ" && b.status !== "受信トレイ") return -1;
     if (b.status === "受信トレイ" && a.status !== "受信トレイ") return 1;
-    return b.created - a.created;
+    // 受注順（来た順）で作るので、同じ優先度の中では古い順＝先に来たものを上に。
+    // created は orderNo と同じ並びになる（採番が created 昇順のため）。
+    return a.created - b.created;
   });
 
   return (
@@ -327,7 +350,11 @@ export default function Home() {
         </div>
       </div>
 
-      <button className={styles.addBtn} onClick={handleQuickAdd}>
+      <button
+        className={styles.addBtn}
+        onClick={handleQuickAdd}
+        disabled={!loaded}
+      >
         <span className={styles.addIcon}>📥</span>
         <span>DMきた（受信トレイに追加）</span>
       </button>

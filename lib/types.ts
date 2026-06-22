@@ -82,6 +82,10 @@ export function trackingUrl(
 export interface Order {
   id: string;
   created: number;
+  // 受注の通し番号（受注順＝古い順で 1,2,3…）。受注した瞬間に固定で振られ、
+  // 他の注文を削除しても変わらない。お客さんとの会話・伝票番号にも使える。
+  // 旧データは初回ロードのマイグレーションで created 昇順に採番される。
+  orderNo?: number;
   customer: string;
   type: ItemType;
   length: string;

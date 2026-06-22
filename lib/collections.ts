@@ -10,3 +10,7 @@ export const META = "meta";
 // 固定ドキュメントID
 export const SETTINGS_DOC = "main";
 export const SEED_META_DOC = "seed";
+// 受注通し番号のカウンタ doc（meta/orderSeq = { next }）。
+// 手動追加・IG自動生成の両経路がここから原子的に採番し、番号の重複を防ぐ。
+// この doc の存在＝初回マイグレーション済みの目印も兼ねる。
+export const ORDER_SEQ_DOC = "orderSeq";

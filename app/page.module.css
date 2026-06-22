@@ -223,6 +223,12 @@
   transform: scale(0.98);
 }
 
+/* 読み込み（採番カウンタ確定）中は押せない。確定後すぐ有効になる。 */
+.addBtn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 .addIcon {
   font-size: 18px;
 }

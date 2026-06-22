@@ -60,6 +60,11 @@ export default function OrderCard({
     >
       <div className={styles.topRow}>
         <span className={styles.customer}>
+          {order.orderNo != null && (
+            <span className={styles.orderNo} title="受注番号（来た順）">
+              受注#{String(order.orderNo).padStart(3, "0")}
+            </span>
+          )}
           {order.source === "instagram" && (
             <span className={styles.igBadge}>📷 IG</span>
           )}

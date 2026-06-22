@@ -1,7 +1,13 @@
 import crypto from "crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebaseAdmin";
-import { ORDERS, IG_MESSAGES, IG_CONVERSATIONS } from "@/lib/collections";
+import {
+  ORDERS,
+  IG_MESSAGES,
+  IG_CONVERSATIONS,
+  META,
+  ORDER_SEQ_DOC,
+} from "@/lib/collections";
 import { IgConversationDoc, Order } from "@/lib/types";
 
 // このファイルはサーバー専用。Firestore セキュリティルールを認証必須に締めても
@@ -246,8 +252,12 @@ async function processIncomingMessage(
     const handle = await resolveUsername(senderId); // "@xxx" | 表示名 | null
     const customer = handle ?? `IG:${senderId}`;
     const orderId = `o_ig_${senderId}_${ts}`;
+    const seqRef = db.collection(META).doc(ORDER_SEQ_DOC);
     await db.runTransaction(async (tx) => {
+      // トランザクションは全 read を全 write より前に行う必要があるため、
+      // 会話とカウンタの取得をここでまとめて済ませる。
       const fresh = await tx.get(convRef);
+      const seqSnap = await tx.get(seqRef);
       if (fresh.exists) {
         // 競合した別イベントが先に会話を作成済み。カードは作らずメタだけ更新する。
         // messageCount は else 経路と揃えて原子インクリメントで数える。
@@ -263,6 +273,17 @@ async function processIncomingMessage(
         );
         return;
       }
+      // カウンタが既に初期化済みのときだけ採番する。未初期化（運用者がまだ一度も
+      // アプリを開いていない初回デプロイ直後など）や next が壊れている場合は番号を
+      // 振らずに置き、運用者の次回ロードの backfill が created 昇順でまとめて採番する。
+      // こうすることで「カウンタ doc を作るのは backfill だけ」という不変条件を保ち、
+      // 採番順が受注順とズレるのを防ぐ。壊れた next を ?? 1 で握りつぶすと #1 を
+      // 再発番して重複するため、有限数のときだけ採番する。
+      const rawNext = seqSnap.exists ? seqSnap.data()?.next : undefined;
+      const orderNo =
+        typeof rawNext === "number" && Number.isFinite(rawNext)
+          ? rawNext
+          : undefined;
       const order: Order = {
         id: orderId,
         created: ts,
@@ -277,7 +298,11 @@ async function processIncomingMessage(
         igThreadId: senderId,
         igSenderId: senderId,
         ...(handle ? { igUsername: handle } : {}),
+        ...(orderNo != null ? { orderNo } : {}),
       };
+      if (orderNo != null) {
+        tx.set(seqRef, { next: orderNo + 1 }, { merge: true });
+      }
       tx.set(db.collection(ORDERS).doc(orderId), order);
       tx.set(convRef, {
         threadId: senderId,
