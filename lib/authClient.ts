@@ -2,6 +2,7 @@ import {
   getAuth,
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut,
   setPersistence,
   browserLocalPersistence,
@@ -25,6 +26,11 @@ export function subscribeAuth(cb: (user: User | null) => void): () => void {
 
 export function login(email: string, password: string) {
   return signInWithEmailAndPassword(auth, email, password);
+}
+
+// パスワードを忘れた場合の再設定メール送信。
+export function resetPassword(email: string) {
+  return sendPasswordResetEmail(auth, email);
 }
 
 export function logout() {

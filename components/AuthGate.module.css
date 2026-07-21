@@ -68,3 +68,18 @@
 .button:disabled {
   opacity: 0.5;
 }
+
+.resetLink {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  text-decoration: underline;
+}
+
+.resetLink:disabled {
+  opacity: 0.5;
+}

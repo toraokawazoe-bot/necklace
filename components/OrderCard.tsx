@@ -9,6 +9,7 @@ interface Props {
   order: Order;
   settings: Settings;
   avgDays: number | null;
+  advancing?: boolean;
   onClick: () => void;
   onAdvance: () => void;
 }
@@ -28,6 +29,7 @@ export default function OrderCard({
   order,
   settings,
   avgDays,
+  advancing,
   onClick,
   onAdvance,
 }: Props) {
@@ -124,13 +126,14 @@ export default function OrderCard({
           <button
             type="button"
             className={styles.advanceBtn}
+            disabled={advancing}
             onClick={(e) => {
               e.stopPropagation();
               onAdvance();
             }}
             title={`「${next}」に進める`}
           >
-            {next} →
+            {advancing ? "処理中…" : `${next} →`}
           </button>
         )}
       </div>

@@ -75,6 +75,14 @@
   margin-bottom: 1.25rem;
 }
 
+.hint {
+  margin: -0.75rem 0 1.25rem;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-tertiary);
+  letter-spacing: 0.02em;
+}
+
 .totalLabel {
   font-size: 11px;
   color: var(--text-tertiary);

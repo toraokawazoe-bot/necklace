@@ -72,6 +72,8 @@ export default function Home() {
   const [showHistory, setShowHistory] = useState(false);
   const [viewMonthOffset, setViewMonthOffset] = useState(0);
   const [loaded, setLoaded] = useState(false);
+  // 連打防止：DM追加が処理中の間、二重に空オーダーが作られないようにする。
+  const [quickAdding, setQuickAdding] = useState(false);
   const [migrationNotice, setMigrationNotice] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState("");
@@ -137,39 +139,66 @@ export default function Home() {
   const handleQuickAdd = async () => {
     // 初期化（採番カウンタの確定）が終わる前は追加させない。ここを通すと
     // カウンタ未初期化のまま採番が走り、採番順が受注順とズレる恐れがある。
-    if (!loaded) return;
-    const newOrder = createEmptyOrder();
-    // 受注順を一目で追えるよう、作成時に固定の通し番号を振る。採番できなくても
-    // （カウンタ未初期化など）追加は止めず、番号は次回ロードの backfill が拾う。
-    // undefined を代入すると Firestore が弾くので、数値が返ったときだけ入れる。
+    // quickAdding は連打防止（処理中の二重タップで空オーダーが2件できるのを防ぐ）。
+    if (!loaded || quickAdding) return;
+    setQuickAdding(true);
     try {
-      const no = await allocateOrderNo();
-      if (no != null) newOrder.orderNo = no;
+      const newOrder = createEmptyOrder();
+      // 受注順を一目で追えるよう、作成時に固定の通し番号を振る。採番できなくても
+      // （カウンタ未初期化など）追加は止めず、番号は次回ロードの backfill が拾う。
+      // undefined を代入すると Firestore が弾くので、数値が返ったときだけ入れる。
+      try {
+        const no = await allocateOrderNo();
+        if (no != null) newOrder.orderNo = no;
+      } catch (e) {
+        console.error("allocateOrderNo failed", e);
+      }
+      await saveOrder(newOrder);
+      setEditing(newOrder);
     } catch (e) {
-      console.error("allocateOrderNo failed", e);
+      console.error("quick add failed", e);
+      alert("追加に失敗しました。通信状況を確認してもう一度お試しください。");
+    } finally {
+      setQuickAdding(false);
     }
-    await saveOrder(newOrder);
-    setEditing(newOrder);
   };
 
   const handleSave = async (order: Order) => {
-    await saveOrder(order);
-    setEditing(null);
+    try {
+      await saveOrder(order);
+      setEditing(null);
+    } catch (e) {
+      console.error("saveOrder failed", e);
+      alert("保存に失敗しました。通信状況を確認してもう一度お試しください（画面はまだ編集中のままです）。");
+    }
   };
 
   const handleDelete = async (id: string) => {
-    await deleteOrder(id);
-    setEditing(null);
+    try {
+      await deleteOrder(id);
+      setEditing(null);
+    } catch (e) {
+      console.error("deleteOrder failed", e);
+      alert("削除に失敗しました。通信状況を確認してもう一度お試しください。");
+    }
   };
 
   const handleSaveSettings = async (next: Settings) => {
-    await saveSettings(next);
-    setShowSettings(false);
+    try {
+      await saveSettings(next);
+      setShowSettings(false);
+    } catch (e) {
+      console.error("saveSettings failed", e);
+      alert("保存に失敗しました。通信状況を確認してもう一度お試しください（画面はまだ編集中のままです）。");
+    }
   };
 
   // カードからステータスを1段階進める（モーダルを開かずに）。
   // 「受注確定」は前払い入金の確認＝売上計上＆着金日スタンプが走るため、誤タップ防止に確認を挟む。
+  const [advancingId, setAdvancingId] = useState<string | null>(null);
   const handleAdvance = async (order: Order) => {
+    // 連打防止：この注文の「次へ」が処理中の間は再実行しない。
+    if (advancingId === order.id) return;
     const next = nextStatus(order.status);
     if (!next) return;
     if (
@@ -178,7 +207,15 @@ export default function Home() {
     ) {
       return;
     }
-    await saveOrder({ ...order, status: next });
+    setAdvancingId(order.id);
+    try {
+      await saveOrder({ ...order, status: next });
+    } catch (e) {
+      console.error("advance status failed", e);
+      alert("ステータス変更に失敗しました。通信状況を確認してもう一度お試しください。");
+    } finally {
+      setAdvancingId(null);
+    }
   };
 
   // フィルタタブに出す件数（検索語があれば検索結果ベースで数える）。
@@ -238,6 +275,7 @@ export default function Home() {
             type="button"
             onClick={() => setMigrationNotice(null)}
             aria-label="閉じる"
+            title="閉じる"
           >×</button>
         </div>
       )}
@@ -254,6 +292,7 @@ export default function Home() {
             className={styles.settingsBtn}
             onClick={() => setShowHistory(true)}
             aria-label="売上履歴"
+            title="売上履歴"
           >
             📅
           </button>
@@ -261,6 +300,7 @@ export default function Home() {
             className={styles.settingsBtn}
             onClick={() => setShowSettings(true)}
             aria-label="設定"
+            title="設定（価格・バックアップ・ステータスの説明）"
           >
             ⚙
           </button>
@@ -269,6 +309,7 @@ export default function Home() {
               className={styles.settingsBtn}
               onClick={() => logout()}
               aria-label="ログアウト"
+              title="ログアウト"
             >
               🔓
             </button>
@@ -283,6 +324,7 @@ export default function Home() {
             className={styles.navBtn}
             onClick={() => setViewMonthOffset((v) => v - 1)}
             aria-label="前の月"
+            title="前の月"
           >
             ‹
           </button>
@@ -297,6 +339,7 @@ export default function Home() {
             className={styles.navBtn}
             onClick={() => setViewMonthOffset((v) => Math.min(0, v + 1))}
             aria-label="次の月"
+            title="次の月"
             disabled={viewMonthOffset >= 0}
           >
             ›
@@ -316,7 +359,7 @@ export default function Home() {
             </div>
           </div>
           <div>
-            <div className={styles.salesLabel}>うち着金</div>
+            <div className={styles.salesLabel}>着金額</div>
             <div className={`${styles.salesValue} ${styles.salesPaid}`}>
               {formatYen(summary.paidAmount)}
             </div>
@@ -345,10 +388,10 @@ export default function Home() {
       <button
         className={styles.addBtn}
         onClick={handleQuickAdd}
-        disabled={!loaded}
+        disabled={!loaded || quickAdding}
       >
         <span className={styles.addIcon}>📥</span>
-        <span>DMきた（問い合わせ中に追加）</span>
+        <span>{quickAdding ? "追加中…" : "DMきた（問い合わせ中に追加）"}</span>
       </button>
 
       <div className={styles.searchWrap}>
@@ -366,6 +409,7 @@ export default function Home() {
             className={styles.searchClear}
             onClick={() => setSearch("")}
             aria-label="検索をクリア"
+            title="検索をクリア"
           >
             ×
           </button>
@@ -411,6 +455,7 @@ export default function Home() {
             order={order}
             settings={settings}
             avgDays={avgDays}
+            advancing={advancingId === order.id}
             onClick={() => setEditing(order)}
             onAdvance={() => handleAdvance(order)}
           />
@@ -421,6 +466,7 @@ export default function Home() {
         <OrderForm
           order={editing}
           settings={settings}
+          avgDays={avgDays}
           onSave={handleSave}
           onDelete={handleDelete}
           onClose={() => setEditing(null)}

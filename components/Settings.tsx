@@ -39,6 +39,12 @@ export default function SettingsPanel({ settings, orders, onSave, onClose }: Pro
 
   const [rows, setRows] = useState<DraftRow[]>(initialRows);
   const [addMonth, setAddMonth] = useState("");
+  // 未保存の変更があるかどうか。外側タップ／×／キャンセルで無警告に破棄しないためのガード。
+  const dirty = JSON.stringify(rows) !== JSON.stringify(initialRows);
+  const handleClose = () => {
+    if (dirty && !confirm("保存していない変更があります。破棄して閉じますか？")) return;
+    onClose();
+  };
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -58,6 +64,7 @@ export default function SettingsPanel({ settings, orders, onSave, onClose }: Pro
   const handleAddMonth = () => {
     if (!addMonth) return;
     if (rows.some((r) => r.key === addMonth)) {
+      alert(`${formatMonth(addMonth)}はすでに追加されています。上の表から金額を編集してください。`);
       setAddMonth("");
       return;
     }
@@ -85,17 +92,19 @@ export default function SettingsPanel({ settings, orders, onSave, onClose }: Pro
   };
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
+    <div className={styles.overlay} onClick={handleClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
           <h3 className={styles.title}>商品設定</h3>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
+          <button className={styles.closeBtn} onClick={handleClose} aria-label="閉じる" title="閉じる">×</button>
         </div>
 
         <p className={styles.note}>
           月ごとの種別別デフォルト金額を設定。
           <br />
           オーダー詳細で個別に上書きすることもできます。
+          <br />
+          ※ここで金額を設定していない月の注文は、価格が未入力のままだと売上集計で¥0円として扱われます。新しい月が始まる前に必ず金額を追加してください。
         </p>
 
         <div className={styles.tableWrap}>
@@ -129,8 +138,12 @@ export default function SettingsPanel({ settings, orders, onSave, onClose }: Pro
           ))}
         </div>
 
+        <label className={styles.label} htmlFor="settings-add-month">
+          追加する月を選択（価格表に新しい月の行を追加します）
+        </label>
         <div className={styles.addMonthRow}>
           <input
+            id="settings-add-month"
             type="month"
             value={addMonth}
             onChange={(e) => setAddMonth(e.target.value)}
@@ -140,6 +153,7 @@ export default function SettingsPanel({ settings, orders, onSave, onClose }: Pro
             className={styles.addMonthBtn}
             onClick={handleAddMonth}
             disabled={!addMonth}
+            title={!addMonth ? "先に左の欄で月を選んでください" : undefined}
           >
             月を追加
           </button>
@@ -147,7 +161,7 @@ export default function SettingsPanel({ settings, orders, onSave, onClose }: Pro
 
         <div className={styles.actions}>
           <button className={styles.saveBtn} onClick={handleSave}>保存</button>
-          <button className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
+          <button className={styles.cancelBtn} onClick={handleClose}>キャンセル</button>
         </div>
 
         <div className={styles.backupSection}>
@@ -176,6 +190,34 @@ export default function SettingsPanel({ settings, orders, onSave, onClose }: Pro
           >
             ⬇ バックアップを書き出す
           </button>
+        </div>
+
+        <div className={styles.backupSection}>
+          <div className={styles.backupHead}>ステータスについて</div>
+          <p className={styles.note}>
+            問い合わせ中：DMが来て、まだ受注確定していない状態
+            <br />
+            受注確定：前払いの入金を確認した状態（ここで売上に計上されます）
+            <br />
+            制作中：制作に取りかかっている状態
+            <br />
+            制作済み：制作が完了し、まだ発送していない状態
+            <br />
+            配送中：発送済み、お届け中の状態
+            <br />
+            納品：お届けが完了した状態（この先には進みません）
+            <br />
+            失注：話が流れた・成立しなかった注文（上の6段階の流れとは別枠であつかいます）
+          </p>
+          <p className={styles.note}>
+            受注#001など：受注した順に振られる通し番号
+            <br />
+            要対応：まだ内容を確認していない新着の問い合わせ（カードを開いて保存すると消えます）
+            <br />
+            改名：相手のInstagramのユーザーネームが変わったことがある印
+            <br />
+            ⏰N日経過：平均的な対応日数を超えていることの合図
+          </p>
         </div>
       </div>
     </div>

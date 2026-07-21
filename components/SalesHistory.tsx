@@ -55,7 +55,7 @@ export default function SalesHistory({ orders, settings, onClose }: Props) {
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
           <h3 className={styles.title}>売上履歴</h3>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
+          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる" title="閉じる">×</button>
         </div>
 
         {months.length === 0 ? (
@@ -69,14 +69,19 @@ export default function SalesHistory({ orders, settings, onClose }: Props) {
                 <div className={styles.totalSub}>{totalBookedCount}件 / {months.length}ヶ月</div>
               </div>
               <div>
-                <div className={styles.totalLabel}>累計 着金</div>
+                <div className={styles.totalLabel}>累計 着金額</div>
                 <div className={`${styles.totalValue} ${styles.totalPaid}`}>{formatYen(totalPaid)}</div>
                 <div className={styles.totalSub}>{totalPaidCount}件</div>
               </div>
             </div>
+            <div className={styles.hint}>
+              受注＝注文が確定した金額／着金＝実際に入金を確認できた金額（前払い制のため月がずれることがあり、着金額が受注額を上回る月もあります）
+            </div>
 
             <div className={styles.chartWrap}>
-              <div className={styles.chartTitle}>月別 受注金額の推移</div>
+              <div className={styles.chartTitle}>
+                月別 受注金額の推移（グラフの高さの目安：最大 {formatYen(maxAmount)}）
+              </div>
               <div className={styles.chartScroll}>
                 <div
                   className={styles.chart}
@@ -117,7 +122,7 @@ export default function SalesHistory({ orders, settings, onClose }: Props) {
                 </span>
                 <span className={styles.legendItem}>
                   <span className={`${styles.legendDot} ${styles.legendPaid}`} />
-                  うち着金
+                  着金額
                 </span>
               </div>
             </div>
@@ -133,7 +138,7 @@ export default function SalesHistory({ orders, settings, onClose }: Props) {
                       <div className={styles.rowSub}>{s.bookedCount}件</div>
                     </div>
                     <div className={styles.rowCol}>
-                      <div className={styles.rowLabel}>うち着金</div>
+                      <div className={styles.rowLabel}>着金額</div>
                       <div className={`${styles.rowValue} ${styles.rowPaid}`}>{formatYen(s.paidAmount)}</div>
                       <div className={styles.rowSub}>{s.paidCount}件</div>
                     </div>

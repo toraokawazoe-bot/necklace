@@ -204,6 +204,11 @@
   background: var(--bg-secondary);
 }
 
+.advanceBtn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 .card.overdue {
   border-color: var(--danger);
   box-shadow: inset 3px 0 0 var(--danger);

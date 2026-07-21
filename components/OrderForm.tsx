@@ -18,12 +18,13 @@ import {
 import { formatDate, formatDateTime, subscribeThreadMessages } from "@/lib/storage";
 import { getIdToken, logout } from "@/lib/authClient";
 import { compressImage } from "@/lib/image";
-import { defaultPrice, formatYen } from "@/lib/pricing";
+import { defaultPrice, elapsedDays, formatYen, isOverdue } from "@/lib/pricing";
 import styles from "./OrderForm.module.css";
 
 interface Props {
   order: Order;
   settings: Settings;
+  avgDays: number | null;
   onSave: (order: Order) => void;
   onDelete: (id: string) => void;
   onClose: () => void;
@@ -62,7 +63,7 @@ function igErrorMessage(data: unknown): string {
   return "送信に失敗しました。時間をおいて再度お試しください。";
 }
 
-export default function OrderForm({ order, settings, onSave, onDelete, onClose }: Props) {
+export default function OrderForm({ order, settings, avgDays, onSave, onDelete, onClose }: Props) {
   const [customer, setCustomer] = useState(order.customer);
   const [type, setType] = useState<ItemType>(order.type);
   const [length, setLength] = useState(order.length);
@@ -206,6 +207,19 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
   };
 
   const handleSave = () => {
+    // カード上の「次へ進める」ボタンだけでなく、このフォームのステータス
+    // プルダウンで直接「受注確定」以降に変更した場合も、入金確認として
+    // 売上計上される旨を確認する（抜け道を塞ぐ）。
+    const paidIndex = ADVANCE_FLOW.indexOf("受注確定");
+    const statusIndex = ADVANCE_FLOW.indexOf(status);
+    const willNewlyMarkPaid =
+      !order.paidAt && paidIndex !== -1 && statusIndex >= paidIndex;
+    if (
+      willNewlyMarkPaid &&
+      !confirm("「受注確定」にすると入金確認として売上に計上されます。よろしいですか？")
+    ) {
+      return;
+    }
     const next: Order = {
       ...order,
       customer: customer.trim(),
@@ -280,7 +294,7 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
   };
 
   const handleDelete = () => {
-    if (confirm("このオーダーを削除しますか？")) {
+    if (confirm("このオーダーを削除しますか？この操作は元に戻せません。")) {
       onDelete(order.id);
     }
   };
@@ -293,10 +307,15 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
           <h3 className={styles.title}>オーダー編集</h3>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
+          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる" title="閉じる（未保存の内容は失われます）">×</button>
         </div>
 
         <div className={styles.dateInfo}>受注日：{formatDate(order.created)}</div>
+        {isOverdue(order, avgDays) && (
+          <div className={styles.hint} style={{ color: "var(--danger)", marginTop: "-1rem", marginBottom: "1rem" }}>
+            ⏰ 受注から{elapsedDays(order)}日経過し、平均対応日数（{avgDays?.toFixed(1)}日）を超えています。一覧のリマインド表示はこれが理由です。
+          </div>
+        )}
 
         {isInstagram && (
           <div className={styles.field}>
@@ -330,7 +349,9 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
         )}
 
         <div className={styles.field}>
-          <label className={styles.label}>インスタID</label>
+          {/* Instagram経由の注文は上に「現在のID」欄があり、紛らわしいので
+              ラベルを分けて「自分用のメモ」であることを明確にする。 */}
+          <label className={styles.label}>{isInstagram ? "呼び方（自分用メモ）" : "インスタID"}</label>
           <input
             type="text"
             placeholder="@username"
@@ -340,7 +361,7 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
           />
           {isInstagram && (
             <div className={styles.hint}>
-              自分用の表示名（自由に変更可。相手の現在のIDは上に表示）
+              自分が呼びやすい名前を自由に入力（相手の実際のIDは上の「現在のID」）
             </div>
           )}
         </div>
@@ -427,6 +448,7 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
                 className={styles.screenshotThumb}
                 onClick={() => setPreviewOpen(true)}
                 aria-label="スクショを拡大"
+                title="タップで拡大表示"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={screenshot} alt="DMスクショ" />
@@ -689,8 +711,9 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
                     // 配送中まで来ていた場合だけ1段階戻す。それより先に進んでいたら触らない。
                     if (status === "配送中") setStatus("制作済み");
                   }}
+                  title="発送日を消し、ステータスが「配送中」なら「制作済み」に戻します"
                 >
-                  取り消し
+                  取り消し（配送中→制作済みに戻る）
                 </button>
               </>
             ) : (
