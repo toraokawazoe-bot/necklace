@@ -1,10 +1,10 @@
 export type OrderStatus =
-  | "受信トレイ"
   | "問い合わせ中"
+  | "受注確定"
   | "制作中"
-  | "支払い待ち"
-  | "発送待ち"
-  | "完了"
+  | "制作済み"
+  | "配送中"
+  | "納品"
   | "失注";
 
 export type ItemType = "ネックレス" | "ブレスレット" | "";
@@ -96,8 +96,15 @@ export interface Order {
   screenshot?: string;
   // 個別の金額上書き（未入力なら受注月のデフォルト価格を使用）
   priceOverride?: number;
-  // status === "完了" になったタイミング。着金日として扱う
-  completedAt?: number;
+  // 新規DM自動作成／クイック追加の直後は true。フォームを開いて保存した時点で
+  // false（対応済み）にする。旧「受信トレイ」ステータスが持っていた「未対応の
+  // 新着」という緊急度シグナルを、ステータスとは独立に持たせるためのフラグ。
+  needsResponse?: boolean;
+  // status が "受注確定" に達したタイミング（前払い＝入金確認できた瞬間）でスタンプ。
+  // 受注確定以降のどの段階でも保持し続け、受注確定より手前に戻されたときだけ消す。
+  paidAt?: number;
+  // status が "納品" になったタイミングでスタンプ（配達完了）。paidAt とは別軸。
+  deliveredAt?: number;
   // --- Instagram DM 連携 ---
   // "instagram" = DM から自動生成されたカード（未設定 or "manual" = 手動入力）
   source?: "instagram" | "manual";
@@ -118,7 +125,7 @@ export interface Order {
   phone?: string;
   carrier?: Carrier; // 配送業者（追跡URL生成・通知文に使う）
   trackingNumber?: string; // 追跡番号（「届いた?」に即答するため）
-  shippedAt?: number; // 発送日。completedAt（着金/完了）とは別軸
+  shippedAt?: number; // 発送日。paidAt/deliveredAtとは別軸
 }
 
 // Instagram DM の 1 メッセージ（ig_messages コレクションの 1 ドキュメント）。
@@ -160,23 +167,23 @@ export interface IgConversationDoc {
 }
 
 export const STATUS_LIST: OrderStatus[] = [
-  "受信トレイ",
   "問い合わせ中",
+  "受注確定",
   "制作中",
-  "支払い待ち",
-  "発送待ち",
-  "完了",
+  "制作済み",
+  "配送中",
+  "納品",
   "失注",
 ];
 
-// ステータスを1段階進める流れ（失注は対象外、完了が終点）。
+// ステータスを1段階進める流れ（失注は対象外、納品が終点）。
 export const ADVANCE_FLOW: OrderStatus[] = [
-  "受信トレイ",
   "問い合わせ中",
+  "受注確定",
   "制作中",
-  "支払い待ち",
-  "発送待ち",
-  "完了",
+  "制作済み",
+  "配送中",
+  "納品",
 ];
 
 // 次に進むステータス。終点（完了）や対象外（失注）は null。

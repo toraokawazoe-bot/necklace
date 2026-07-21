@@ -24,8 +24,8 @@ export default function SalesHistory({ orders, settings, onClose }: Props) {
     for (const o of orders) {
       if (o.status === "失注") continue;
       keys.add(monthKey(o.created));
-      if (o.status === "完了") {
-        keys.add(monthKey(o.completedAt ?? o.created));
+      if (o.paidAt) {
+        keys.add(monthKey(o.paidAt));
       }
     }
     return Array.from(keys).sort();

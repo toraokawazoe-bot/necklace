@@ -10,6 +10,7 @@ import {
   deleteOrder,
   mergeSeedOrdersOnce,
   migrateLegacyLocalOrders,
+  migrateStatusesOnce,
   createEmptyOrder,
   backfillOrderNos,
   allocateOrderNo,
@@ -33,12 +34,12 @@ type Filter = "all" | OrderStatus;
 
 const FILTERS: { label: string; value: Filter }[] = [
   { label: "すべて", value: "all" },
-  { label: "📥 受信", value: "受信トレイ" },
-  { label: "問い合わせ", value: "問い合わせ中" },
+  { label: "問い合わせ中", value: "問い合わせ中" },
+  { label: "受注確定", value: "受注確定" },
   { label: "制作中", value: "制作中" },
-  { label: "支払い待ち", value: "支払い待ち" },
-  { label: "発送待ち", value: "発送待ち" },
-  { label: "完了", value: "完了" },
+  { label: "制作済み", value: "制作済み" },
+  { label: "配送中", value: "配送中" },
+  { label: "納品", value: "納品" },
   { label: "失注", value: "失注" },
 ];
 
@@ -88,6 +89,13 @@ export default function Home() {
         }
       } catch (e) {
         console.error("legacy migration failed", e);
+      }
+      // 旧7ステータス→新6段階+失注への一度きりの移行。購読開始前に完了させ、
+      // 一覧が旧ステータス文字列のまま一瞬表示される（フィルタ/色が対応しない）のを防ぐ。
+      try {
+        await migrateStatusesOnce();
+      } catch (e) {
+        console.error("status migration failed", e);
       }
       // シード投入が失敗（オフライン・権限エラー等）しても、購読開始まで到達せず
       // 画面が無言でロード中のまま固まらないよう、ここで遮断する。
@@ -160,13 +168,13 @@ export default function Home() {
   };
 
   // カードからステータスを1段階進める（モーダルを開かずに）。
-  // 「完了」は売上計上＆着金日スタンプが走るため、誤タップ防止に確認を挟む。
+  // 「受注確定」は前払い入金の確認＝売上計上＆着金日スタンプが走るため、誤タップ防止に確認を挟む。
   const handleAdvance = async (order: Order) => {
     const next = nextStatus(order.status);
     if (!next) return;
     if (
-      next === "完了" &&
-      !confirm("「完了」にすると売上（着金）に計上されます。よろしいですか？")
+      next === "受注確定" &&
+      !confirm("「受注確定」にすると入金確認として売上に計上されます。よろしいですか？")
     ) {
       return;
     }
@@ -183,11 +191,6 @@ export default function Home() {
     for (const o of countSource) m[o.status] = (m[o.status] ?? 0) + 1;
     return m;
   }, [countSource]);
-
-  const inboxCount = orders.filter((o) => o.status === "受信トレイ").length;
-  const progressCount = orders.filter((o) =>
-    ["問い合わせ中", "制作中", "支払い待ち", "発送待ち"].includes(o.status)
-  ).length;
 
   const viewedMonthDate = useMemo(() => {
     const n = new Date();
@@ -219,8 +222,8 @@ export default function Home() {
     const aOver = isOverdue(a, avgDays) ? 1 : 0;
     const bOver = isOverdue(b, avgDays) ? 1 : 0;
     if (aOver !== bOver) return bOver - aOver;
-    if (a.status === "受信トレイ" && b.status !== "受信トレイ") return -1;
-    if (b.status === "受信トレイ" && a.status !== "受信トレイ") return 1;
+    if (a.needsResponse && !b.needsResponse) return -1;
+    if (b.needsResponse && !a.needsResponse) return 1;
     // 受注順（来た順）で作るので、同じ優先度の中では古い順＝先に来たものを上に。
     // created は orderNo と同じ並びになる（採番が created 昇順のため）。
     return a.created - b.created;
@@ -339,24 +342,13 @@ export default function Home() {
         )}
       </section>
 
-      <div className={styles.stats}>
-        <div className={styles.statCard}>
-          <div className={styles.statLabel}>受信トレイ</div>
-          <div className={styles.statValue}>{inboxCount}</div>
-        </div>
-        <div className={styles.statCard}>
-          <div className={styles.statLabel}>進行中</div>
-          <div className={styles.statValue}>{progressCount}</div>
-        </div>
-      </div>
-
       <button
         className={styles.addBtn}
         onClick={handleQuickAdd}
         disabled={!loaded}
       >
         <span className={styles.addIcon}>📥</span>
-        <span>DMきた（受信トレイに追加）</span>
+        <span>DMきた（問い合わせ中に追加）</span>
       </button>
 
       <div className={styles.searchWrap}>

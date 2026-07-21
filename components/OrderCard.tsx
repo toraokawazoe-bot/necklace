@@ -15,12 +15,12 @@ interface Props {
 
 // Record<OrderStatus, ...> にして、ステータスを追加したときの対応漏れを型で検知する。
 const statusClass: Record<OrderStatus, string> = {
-  "受信トレイ": styles.sInbox,
   "問い合わせ中": styles.sInquiry,
+  "受注確定": styles.sConfirmed,
   "制作中": styles.sMaking,
-  "支払い待ち": styles.sUnpaid,
-  "発送待ち": styles.sShipping,
-  "完了": styles.sDone,
+  "制作済み": styles.sMade,
+  "配送中": styles.sShipping,
+  "納品": styles.sDone,
   "失注": styles.sLost,
 };
 
@@ -31,7 +31,7 @@ export default function OrderCard({
   onClick,
   onAdvance,
 }: Props) {
-  const isInbox = order.status === "受信トレイ";
+  const isInbox = !!order.needsResponse;
   const overdue = isOverdue(order, avgDays);
   const designDisplay =
     order.design && order.design.length > 32
@@ -74,12 +74,13 @@ export default function OrderCard({
             order.igUsername !== order.customer && (
               <span className={styles.igHandle}>{order.igUsername}</span>
             )}
-          {order.igUsernameHistory && order.igUsernameHistory.length > 0 && (
-            <span className={styles.igRenamed} title="ユーザーネーム変更あり">
-              改名
-            </span>
-          )}
         </span>
+        {/* 省略表示（ellipsis）の対象外に固定し、名前が長くても改名警告が消えないようにする */}
+        {order.igUsernameHistory && order.igUsernameHistory.length > 0 && (
+          <span className={styles.igRenamed} title="ユーザーネーム変更あり">
+            改名
+          </span>
+        )}
         <span className={`${styles.statusBadge} ${statusClass[order.status] || ""}`}>
           {order.status}
         </span>

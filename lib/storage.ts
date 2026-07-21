@@ -4,6 +4,7 @@ import {
   getDoc,
   setDoc,
   deleteDoc,
+  deleteField,
   onSnapshot,
   getDocs,
   writeBatch,
@@ -12,7 +13,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { EMPTY_SETTINGS, IgMessageDoc, Order, Settings } from "./types";
+import { ADVANCE_FLOW, EMPTY_SETTINGS, IgMessageDoc, Order, OrderStatus, Settings } from "./types";
 import {
   ORDERS as ORDERS_COL,
   IG_MESSAGES as IG_MESSAGES_COL,
@@ -21,10 +22,32 @@ import {
   SETTINGS_DOC,
   SEED_META_DOC,
   ORDER_SEQ_DOC,
+  STATUS_MIGRATION_DOC,
 } from "./collections";
 
 const LEGACY_LS_KEY = "necklace_orders_v1";
 const LEGACY_LS_MIGRATED_FLAG = "necklace_orders_v1_migrated";
+
+const PAID_INDEX = ADVANCE_FLOW.indexOf("受注確定");
+const DELIVERED_INDEX = ADVANCE_FLOW.indexOf("納品");
+
+// マイルストーン系タイムスタンプ（paidAt/deliveredAt）の自動スタンプ。
+// ADVANCE_FLOW上でそのマイルストーン以降に留まる限り保持し、手前に戻されたら消す。
+// 失注（ADVANCE_FLOW外）はどちらの分岐にも触れず、既存の値をそのまま残す
+// （入金済みで失注した記録を消さないため）。
+function stampMilestone(
+  next: Order,
+  key: "paidAt" | "deliveredAt",
+  milestoneIndex: number
+): void {
+  const statusIndex = ADVANCE_FLOW.indexOf(next.status);
+  if (statusIndex === -1) return;
+  if (statusIndex >= milestoneIndex) {
+    if (!next[key]) next[key] = Date.now();
+  } else {
+    delete next[key];
+  }
+}
 
 export function subscribeOrders(
   onData: (orders: Order[]) => void,
@@ -47,11 +70,8 @@ export function subscribeOrders(
 
 export async function saveOrder(order: Order): Promise<void> {
   const next: Order = { ...order };
-  if (next.status === "完了") {
-    if (!next.completedAt) next.completedAt = Date.now();
-  } else {
-    delete next.completedAt;
-  }
+  stampMilestone(next, "paidAt", PAID_INDEX);
+  stampMilestone(next, "deliveredAt", DELIVERED_INDEX);
   if (next.priceOverride === undefined || Number.isNaN(next.priceOverride)) {
     delete next.priceOverride;
   }
@@ -181,7 +201,10 @@ export async function migrateLegacyLocalOrders(): Promise<number> {
   }
   const batch = writeBatch(db);
   for (const order of missing) {
-    const clean: Order = { ...order };
+    // ここに入ってくる旧データは、新Order型が持たない旧フィールド（completedAt）や
+    // 旧ステータス文字列を含んでいる可能性がある。書き込み後は migrateStatusesOnce が
+    // 同じロード内で拾って新スキーマへ揃えるため、ここでは undefined 除去のみ行う。
+    const clean = { ...order } as Order & { completedAt?: number };
     if (clean.priceOverride === undefined || Number.isNaN(clean.priceOverride)) {
       delete clean.priceOverride;
     }
@@ -251,9 +274,82 @@ export function createEmptyOrder(): Order {
     length: "",
     design: "",
     payment: "",
-    status: "受信トレイ",
+    status: "問い合わせ中",
     memo: "",
+    needsResponse: true,
   };
+}
+
+// 旧7ステータス（受信トレイ/問い合わせ中/制作中/支払い待ち/発送待ち/完了/失注）から
+// 新6段階+失注への一度きりの移行。backfillOrderNos/mergeSeedOrdersOnce と同じ
+// 「meta フラグdocで一度だけ実行」パターン。位置ベースのマッピングで、旧「支払い待ち」
+// 「発送待ち」は入金済みかどうかのデータが無いため paidAt を推測で作らない。
+type LegacyStatus = "受信トレイ" | "問い合わせ中" | "制作中" | "支払い待ち" | "発送待ち" | "完了" | "失注";
+
+function mapLegacyStatus(legacy: LegacyStatus, hasShippedAt: boolean): OrderStatus {
+  switch (legacy) {
+    case "受信トレイ":
+    case "問い合わせ中":
+      return "問い合わせ中";
+    case "制作中":
+      return "制作中";
+    case "支払い待ち":
+      return "制作済み";
+    case "発送待ち":
+      return hasShippedAt ? "配送中" : "制作済み";
+    case "完了":
+      return "納品";
+    case "失注":
+      return "失注";
+    default:
+      // 想定外の値（手動編集等で壊れたデータ）は書き換えず現状維持にする。
+      return legacy as unknown as OrderStatus;
+  }
+}
+
+export async function migrateStatusesOnce(): Promise<void> {
+  const flagRef = doc(db, META_COL, STATUS_MIGRATION_DOC);
+  const flagSnap = await getDoc(flagRef);
+  if (flagSnap.exists() && (flagSnap.data() as { migrated?: boolean }).migrated) {
+    return;
+  }
+  const snapshot = await getDocs(collection(db, ORDERS_COL));
+  const NEW_STATUSES = new Set<OrderStatus>([
+    "問い合わせ中", "受注確定", "制作中", "制作済み", "配送中", "納品", "失注",
+  ]);
+  const summary: Record<string, number> = {};
+  const updates: { id: string; patch: Record<string, unknown> }[] = [];
+  for (const d of snapshot.docs) {
+    const o = d.data() as Order & { completedAt?: number };
+    // 既に新ステータス文字列なら移行対象外（新規作成分やこの関数の再実行時）。
+    if (NEW_STATUSES.has(o.status as OrderStatus) && o.completedAt === undefined) continue;
+    const legacy = o.status as unknown as LegacyStatus;
+    const newStatus = mapLegacyStatus(legacy, !!o.shippedAt);
+    const patch: Record<string, unknown> = { status: newStatus };
+    if (legacy === "受信トレイ") patch.needsResponse = true;
+    // completedAt は全ケース共通で paidAt へ引き継いでから削除する。
+    if (typeof o.completedAt === "number") {
+      patch.paidAt = o.completedAt;
+      if (legacy === "完了") patch.deliveredAt = o.completedAt;
+      patch.completedAt = deleteField();
+    }
+    updates.push({ id: d.id, patch });
+    const key = `${legacy} → ${newStatus}`;
+    summary[key] = (summary[key] ?? 0) + 1;
+  }
+  // Firestore のバッチ上限（500オペ）を超えないよう分割コミット（backfillOrderNos と同じ方針）。
+  const CHUNK = 400;
+  for (let i = 0; i < updates.length; i += CHUNK) {
+    const batch = writeBatch(db);
+    updates.slice(i, i + CHUNK).forEach(({ id, patch }) => {
+      batch.update(doc(db, ORDERS_COL, id), patch);
+    });
+    await batch.commit();
+  }
+  await setDoc(flagRef, { migrated: true, at: Date.now(), count: updates.length });
+  if (updates.length > 0) {
+    console.log(`[migrateStatusesOnce] ${updates.length}件を移行しました`, summary);
+  }
 }
 
 export function formatDate(ts: number): string {

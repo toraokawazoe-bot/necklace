@@ -77,8 +77,8 @@ export function summarizeMonth(
       bookedAmount += price;
       if (ep === undefined) bookedNoPriceCount += 1;
     }
-    if (o.status === "完了") {
-      const paidTs = o.completedAt ?? o.created;
+    if (o.paidAt) {
+      const paidTs = o.paidAt;
       if (monthKey(paidTs) === key) {
         paidCount += 1;
         paidAmount += price;
@@ -99,13 +99,12 @@ export function summarizeMonth(
 
 const DAY_MS = 86_400_000;
 
-// 完了したオーダーから、受注→着金までの平均日数を計算
+// 入金済みオーダーから、受注→着金（受注確定）までの平均日数を計算
 export function averagePaidDays(orders: Order[]): number | null {
   const diffs: number[] = [];
   for (const o of orders) {
-    if (o.status !== "完了") continue;
-    if (!o.completedAt || !o.created) continue;
-    const diff = (o.completedAt - o.created) / DAY_MS;
+    if (!o.paidAt || !o.created) continue;
+    const diff = (o.paidAt - o.created) / DAY_MS;
     if (diff >= 0) diffs.push(diff);
   }
   if (diffs.length === 0) return null;
@@ -113,10 +112,10 @@ export function averagePaidDays(orders: Order[]): number | null {
   return sum / diffs.length;
 }
 
-// オーダー単位のリマインド判定。完了/失注は対象外
+// オーダー単位のリマインド判定。納品済み/失注はもう追う必要がないので対象外
 export function isOverdue(order: Order, avgDays: number | null): boolean {
   if (avgDays === null) return false;
-  if (order.status === "完了" || order.status === "失注") return false;
+  if (order.status === "納品" || order.status === "失注") return false;
   const elapsed = (Date.now() - order.created) / DAY_MS;
   return elapsed > avgDays;
 }

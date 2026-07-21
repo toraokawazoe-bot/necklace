@@ -11,6 +11,7 @@ import {
   trackingUrl,
   Settings,
   STATUS_LIST,
+  ADVANCE_FLOW,
   IgMessageDoc,
 } from "@/lib/types";
 import { formatDate, formatDateTime, subscribeThreadMessages } from "@/lib/storage";
@@ -212,6 +213,8 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
       status,
       memo: memo.trim(),
     };
+    // フォームを開いて保存した時点で「対応済み」とみなす。
+    delete next.needsResponse;
     if (screenshot) {
       next.screenshot = screenshot;
     } else {
@@ -552,7 +555,7 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
           <select value={status} onChange={(e) => setStatus(e.target.value as OrderStatus)}>
             {STATUS_LIST.map((s) => (
               <option key={s} value={s}>
-                {s === "受信トレイ" ? "📥 " + s : s}
+                {s}
               </option>
             ))}
           </select>
@@ -579,36 +582,46 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
               {addrCopied ? "コピー済 ✓" : "宛先をコピー"}
             </button>
           </div>
+          <label className={styles.label} htmlFor="ship-name">宛名</label>
           <input
+            id="ship-name"
             type="text"
-            placeholder="宛名（例：田中花子）"
+            placeholder="例：田中花子"
             value={shippingName}
             onChange={(e) => setShippingName(e.target.value)}
             autoComplete="off"
           />
+          <label className={styles.label} htmlFor="ship-postal">郵便番号</label>
           <input
+            id="ship-postal"
             type="text"
             inputMode="numeric"
-            placeholder="郵便番号"
+            placeholder="例：123-4567"
             value={postalCode}
             onChange={(e) => setPostalCode(e.target.value)}
             autoComplete="off"
           />
+          <label className={styles.label} htmlFor="ship-address">住所</label>
           <textarea
-            placeholder="住所（都道府県から建物・部屋番号まで）"
+            id="ship-address"
+            placeholder="都道府県から建物・部屋番号まで"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             rows={2}
           />
+          <label className={styles.label} htmlFor="ship-phone">電話番号</label>
           <input
+            id="ship-phone"
             type="tel"
             inputMode="tel"
-            placeholder="電話番号"
+            placeholder="例：090-1234-5678"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             autoComplete="off"
           />
+          <label className={styles.label} htmlFor="ship-carrier">配送業者</label>
           <select
+            id="ship-carrier"
             value={carrier}
             onChange={(e) => setCarrier(e.target.value as Carrier)}
           >
@@ -619,9 +632,11 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
               </option>
             ))}
           </select>
+          <label className={styles.label} htmlFor="ship-tracking">追跡番号</label>
           <input
+            id="ship-tracking"
             type="text"
-            placeholder="追跡番号"
+            placeholder="配送業者から届いた番号"
             value={trackingNumber}
             onChange={(e) => setTrackingNumber(e.target.value)}
             autoComplete="off"
@@ -645,7 +660,11 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
                 <button
                   type="button"
                   className={styles.shipClearBtn}
-                  onClick={() => setShippedAt(undefined)}
+                  onClick={() => {
+                    setShippedAt(undefined);
+                    // 配送中まで来ていた場合だけ1段階戻す。それより先に進んでいたら触らない。
+                    if (status === "配送中") setStatus("制作済み");
+                  }}
                 >
                   取り消し
                 </button>
@@ -654,9 +673,17 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
               <button
                 type="button"
                 className={styles.shipDoneBtn}
-                onClick={() => setShippedAt(Date.now())}
+                onClick={() => {
+                  setShippedAt(Date.now());
+                  // ステータスがフロー上でまだ配送中に届いていなければ引き上げる
+                  // （失注などフロー外のステータスは対象外）。
+                  const idx = ADVANCE_FLOW.indexOf(status);
+                  if (idx !== -1 && idx < ADVANCE_FLOW.indexOf("配送中")) {
+                    setStatus("配送中");
+                  }
+                }}
               >
-                📦 発送済みにする（発送日を記録）
+                📦 発送済みにする（発送日を記録・配送中にする）
               </button>
             )}
           </div>

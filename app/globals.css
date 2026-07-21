@@ -6,7 +6,8 @@
   --border-strong: rgba(0, 0, 0, 0.2);
   --text: #1a1a1a;
   --text-secondary: #5f5e5a;
-  --text-tertiary: #888780;
+  /* #888780 はライトモードでコントラスト比 3.4〜3.6:1 と AA(4.5:1) 未達のため濃くする */
+  --text-tertiary: #6b6a63;
   --accent: #3B6D11;
   --accent-bg: #EAF3DE;
   --danger: #A32D2D;
@@ -63,7 +64,8 @@ button {
 
 input, select, textarea {
   font-family: inherit;
-  font-size: 15px;
+  /* 16px未満だとiOS Safariがフォーカス時に自動ズームし、画面が暴れる */
+  font-size: 16px;
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--border);

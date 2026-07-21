@@ -14,3 +14,5 @@ export const SEED_META_DOC = "seed";
 // 手動追加・IG自動生成の両経路がここから原子的に採番し、番号の重複を防ぐ。
 // この doc の存在＝初回マイグレーション済みの目印も兼ねる。
 export const ORDER_SEQ_DOC = "orderSeq";
+// 旧7ステータス→新6段階+失注への移行が完了したかのフラグ（meta/statusMigration = { migrated }）。
+export const STATUS_MIGRATION_DOC = "statusMigration";

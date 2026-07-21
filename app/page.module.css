@@ -38,8 +38,8 @@
   background: transparent;
   border: 1px solid var(--border);
   border-radius: 999px;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   font-size: 16px;
   display: flex;
   align-items: center;
@@ -75,8 +75,8 @@
   background: transparent;
   border: 1px solid var(--border);
   border-radius: 999px;
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
   font-size: 18px;
   line-height: 1;
   display: flex;
@@ -173,33 +173,6 @@
   font-weight: 500;
 }
 
-.stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 1.25rem;
-}
-
-.statCard {
-  background: var(--bg-secondary);
-  border-radius: var(--radius-md);
-  padding: 12px 14px;
-}
-
-.statLabel {
-  font-size: 12px;
-  color: var(--text-secondary);
-  letter-spacing: 0.05em;
-  margin-bottom: 2px;
-}
-
-.statValue {
-  font-family: var(--font-display);
-  font-size: 28px;
-  font-weight: 500;
-  line-height: 1.1;
-}
-
 .addBtn {
   width: 100%;
   display: flex;
@@ -240,7 +213,7 @@
 
 .search {
   width: 100%;
-  padding: 10px 36px 10px 14px;
+  padding: 10px 46px 10px 14px;
   font-size: 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -258,10 +231,10 @@
 .searchClear {
   position: absolute;
   top: 50%;
-  right: 8px;
+  right: 2px;
   transform: translateY(-50%);
-  width: 26px;
-  height: 26px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -280,15 +253,13 @@
   overflow-x: auto;
   padding-bottom: 4px;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.filters::-webkit-scrollbar {
-  display: none;
+  /* スクロールできることが分かるよう、隠さずに表示する（SalesHistoryの.chartScrollと統一）。 */
+  scrollbar-width: thin;
 }
 
 .filterBtn {
   flex-shrink: 0;
+  min-height: 44px;
   padding: 7px 14px;
   font-size: 13px;
   background: transparent;

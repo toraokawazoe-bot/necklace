@@ -90,11 +90,11 @@
 
 .igRenamed {
   display: inline-block;
-  font-size: 9px;
+  flex-shrink: 0;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  padding: 1px 5px;
-  margin-left: 6px;
+  padding: 2px 6px;
   border-radius: 4px;
   color: var(--danger);
   background: var(--danger-bg);
@@ -102,6 +102,7 @@
 }
 
 .statusBadge {
+  flex-shrink: 0;
   font-size: 11px;
   padding: 3px 10px;
   border-radius: 999px;
@@ -110,19 +111,22 @@
   letter-spacing: 0.03em;
 }
 
-.sInbox { background: #FAECE7; color: #993C1D; }
+/* 問い合わせ中(中立)→受注確定(入金)→制作中→制作済み→配送中→納品(完了) の
+   進行がわかるよう配色。失注のみ無彩色。旧ステータスの色（例：赤=未払い警告）を
+   意味の異なる新ステータスへ使い回さない。 */
 .sInquiry { background: #F1EFE8; color: #5F5E5A; }
+.sConfirmed { background: #FBF0D2; color: #8A6D14; }
 .sMaking { background: #FAEEDA; color: #854F0B; }
-.sUnpaid { background: #FCEBEB; color: #A32D2D; }
+.sMade { background: #EEEDFE; color: #3C3489; }
 .sShipping { background: #E6F1FB; color: #185FA5; }
 .sDone { background: #E1F5EE; color: #0F6E56; }
 .sLost { background: #F1EFE8; color: #888780; }
 
 @media (prefers-color-scheme: dark) {
-  .sInbox { background: #712B13; color: #F5C4B3; }
   .sInquiry { background: #2C2C2A; color: #D3D1C7; }
+  .sConfirmed { background: #6B5209; color: #F5DE8A; }
   .sMaking { background: #633806; color: #FAC775; }
-  .sUnpaid { background: #791F1F; color: #F7C1C1; }
+  .sMade { background: #3C3489; color: #CECBF6; }
   .sShipping { background: #0C447C; color: #B5D4F4; }
   .sDone { background: #085041; color: #9FE1CB; }
   .sLost { background: #444441; color: #B4B2A9; }
@@ -183,7 +187,8 @@
 /* 「次へ」進めるボタン。bottomRow の右端へ寄せる。 */
 .advanceBtn {
   margin-left: auto;
-  padding: 4px 10px;
+  min-height: 44px;
+  padding: 10px 14px;
   font-size: 11px;
   font-weight: 600;
   color: var(--text);
