@@ -91,13 +91,7 @@ export default function OrderCard({
       {(order.type || order.design) && (
         <div className={styles.midRow}>
           {order.type && (
-            <span
-              className={`${styles.typeTag} ${
-                order.type === "ネックレス" ? styles.typeNecklace : styles.typeBracelet
-              }`}
-            >
-              {order.type}
-            </span>
+            <span className={styles.typeTag}>{order.type}</span>
           )}
           {designDisplay && <span className={styles.design}>{designDisplay}</span>}
         </div>

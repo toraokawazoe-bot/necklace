@@ -38,9 +38,10 @@
   gap: 10px;
 }
 
+/* 一覧で最初に目が行くべきは「誰の注文か」。番号チップより強く見せる。 */
 .customer {
-  font-weight: 500;
-  font-size: 15px;
+  font-weight: 600;
+  font-size: 16px;
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -49,23 +50,21 @@
   min-width: 0;
 }
 
+/* 受注番号は補足情報。ピル型の塗りつぶしをやめ、顧客名より控えめな地の文にする。 */
 .orderNo {
   display: inline-block;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
-  padding: 2px 6px;
   margin-right: 6px;
-  border-radius: 5px;
-  color: var(--text-secondary);
-  background: var(--bg-secondary);
+  color: var(--text-tertiary);
   vertical-align: middle;
 }
 
 .igBadge {
   display: inline-block;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.02em;
   padding: 2px 6px;
@@ -139,20 +138,17 @@
   flex-wrap: wrap;
 }
 
+/* 種別タグはあえて無彩色にする。ステータスバッジと同じ紫/ミントを使うと
+   「制作済み」＝ネックレス、「納品」＝ブレスレットに見えてしまい、
+   色でステータスを見分ける仕組みが半分死ぬため（色＝ステータスの1対1を守る）。 */
 .typeTag {
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 4px;
   font-weight: 500;
   letter-spacing: 0.03em;
-}
-
-.typeNecklace { background: #E6E1FF; color: #5B3DF5; }
-.typeBracelet { background: #D2F8E8; color: #0E9166; }
-
-@media (prefers-color-scheme: dark) {
-  .typeNecklace { background: #3527A8; color: #C6BBFF; }
-  .typeBracelet { background: #0A5A40; color: #8CEFCB; }
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
 }
 
 .design {
@@ -168,7 +164,7 @@
 .bottomRow {
   display: flex;
   gap: 12px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-tertiary);
   flex-wrap: wrap;
 }
@@ -184,16 +180,17 @@
   letter-spacing: 0.02em;
 }
 
-/* 「次へ」進めるボタン。bottomRow の右端へ寄せる。 */
+/* 「次へ」進めるボタン。bottomRow の右端へ寄せる。カード上で唯一の操作なので、
+   表示専用のステータスバッジより弱く見えないよう塗りつぶしにする。 */
 .advanceBtn {
   margin-left: auto;
   min-height: 44px;
   padding: 10px 14px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
+  color: var(--bg);
+  background: var(--accent);
+  border: 1px solid var(--accent);
   border-radius: 999px;
   font-family: inherit;
   white-space: nowrap;
@@ -201,7 +198,7 @@
 }
 
 .advanceBtn:active {
-  background: var(--bg-secondary);
+  opacity: 0.85;
 }
 
 .advanceBtn:disabled {
