@@ -39,5 +39,6 @@ export const SEED_ORDERS: Order[] = ([
   created: BASE + i,
   status: "制作中" as const,
   memo: "",
+  adjuster: "" as const,
   ...o,
 }));

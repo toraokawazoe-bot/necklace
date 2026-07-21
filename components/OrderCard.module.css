@@ -114,21 +114,21 @@
 /* 問い合わせ中(中立)→受注確定(入金)→制作中→制作済み→配送中→納品(完了) の
    進行がわかるよう配色。失注のみ無彩色。旧ステータスの色（例：赤=未払い警告）を
    意味の異なる新ステータスへ使い回さない。 */
-.sInquiry { background: #F1EFE8; color: #5F5E5A; }
-.sConfirmed { background: #FBF0D2; color: #8A6D14; }
-.sMaking { background: #FAEEDA; color: #854F0B; }
-.sMade { background: #EEEDFE; color: #3C3489; }
-.sShipping { background: #E6F1FB; color: #185FA5; }
-.sDone { background: #E1F5EE; color: #0F6E56; }
+.sInquiry { background: #E3F0FB; color: #0E6FB8; }
+.sConfirmed { background: #FFF1B8; color: #9A6E00; }
+.sMaking { background: #FFE3BF; color: #C2540A; }
+.sMade { background: #E6E1FF; color: #5B3DF5; }
+.sShipping { background: #D6EFFF; color: #0284C7; }
+.sDone { background: #D2F8E8; color: #0E9166; }
 .sLost { background: #F1EFE8; color: #888780; }
 
 @media (prefers-color-scheme: dark) {
-  .sInquiry { background: #2C2C2A; color: #D3D1C7; }
-  .sConfirmed { background: #6B5209; color: #F5DE8A; }
-  .sMaking { background: #633806; color: #FAC775; }
-  .sMade { background: #3C3489; color: #CECBF6; }
-  .sShipping { background: #0C447C; color: #B5D4F4; }
-  .sDone { background: #085041; color: #9FE1CB; }
+  .sInquiry { background: #0C4A78; color: #A8D8FF; }
+  .sConfirmed { background: #6B4E00; color: #FFE38A; }
+  .sMaking { background: #7A3405; color: #FFB980; }
+  .sMade { background: #3527A8; color: #C6BBFF; }
+  .sShipping { background: #054A6E; color: #93D6FF; }
+  .sDone { background: #0A5A40; color: #8CEFCB; }
   .sLost { background: #444441; color: #B4B2A9; }
 }
 
@@ -147,12 +147,12 @@
   letter-spacing: 0.03em;
 }
 
-.typeNecklace { background: #EEEDFE; color: #3C3489; }
-.typeBracelet { background: #E1F5EE; color: #0F6E56; }
+.typeNecklace { background: #E6E1FF; color: #5B3DF5; }
+.typeBracelet { background: #D2F8E8; color: #0E9166; }
 
 @media (prefers-color-scheme: dark) {
-  .typeNecklace { background: #3C3489; color: #CECBF6; }
-  .typeBracelet { background: #085041; color: #9FE1CB; }
+  .typeNecklace { background: #3527A8; color: #C6BBFF; }
+  .typeBracelet { background: #0A5A40; color: #8CEFCB; }
 }
 
 .design {

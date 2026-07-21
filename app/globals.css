@@ -1,5 +1,5 @@
 :root {
-  --bg: #faf9f6;
+  --bg: #ffffff;
   --bg-secondary: #f1efe8;
   --surface: #ffffff;
   --border: rgba(0, 0, 0, 0.1);
@@ -8,12 +8,12 @@
   --text-secondary: #5f5e5a;
   /* #888780 はライトモードでコントラスト比 3.4〜3.6:1 と AA(4.5:1) 未達のため濃くする */
   --text-tertiary: #6b6a63;
-  --accent: #3B6D11;
-  --accent-bg: #EAF3DE;
+  --accent: #1E9E4A;
+  --accent-bg: #E1F8E8;
   --danger: #A32D2D;
   --danger-bg: #FCEBEB;
-  --inbox: #993C1D;
-  --inbox-bg: #FAECE7;
+  --inbox: #16A34A;
+  --inbox-bg: #E4F9EA;
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
@@ -31,12 +31,12 @@
     --text: #faf9f6;
     --text-secondary: #b4b2a9;
     --text-tertiary: #888780;
-    --accent: #97C459;
-    --accent-bg: #173404;
+    --accent: #4ADE80;
+    --accent-bg: #0F3D22;
     --danger: #F09595;
     --danger-bg: #501313;
-    --inbox: #F0997B;
-    --inbox-bg: #4A1B0C;
+    --inbox: #22C55E;
+    --inbox-bg: #0F2E1B;
   }
 }
 

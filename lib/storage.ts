@@ -272,6 +272,7 @@ export function createEmptyOrder(): Order {
     customer: "",
     type: "",
     length: "",
+    adjuster: "",
     design: "",
     payment: "",
     status: "問い合わせ中",

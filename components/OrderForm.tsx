@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Order,
   ItemType,
+  Adjuster,
   PaymentMethod,
   OrderStatus,
   Carrier,
@@ -65,6 +66,8 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
   const [customer, setCustomer] = useState(order.customer);
   const [type, setType] = useState<ItemType>(order.type);
   const [length, setLength] = useState(order.length);
+  // 既存オーダーにはまだ無いフィールドなので、未設定は「なし」ではなく空欄（未選択）扱い。
+  const [adjuster, setAdjuster] = useState<Adjuster>(order.adjuster ?? "");
   const [design, setDesign] = useState(order.design);
   const [payment, setPayment] = useState<PaymentMethod>(order.payment);
   const [status, setStatus] = useState<OrderStatus>(order.status);
@@ -208,6 +211,7 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
       customer: customer.trim(),
       type,
       length,
+      adjuster,
       design: design.trim(),
       payment,
       status,
@@ -486,6 +490,26 @@ export default function OrderForm({ order, settings, onSave, onDelete, onClose }
             onChange={(e) => setLength(e.target.value)}
             inputMode="numeric"
           />
+        </div>
+
+        <div className={styles.field}>
+          <label className={styles.label}>アジャスター</label>
+          <div className={styles.typeGrid}>
+            <button
+              type="button"
+              className={`${styles.typeBtn} ${adjuster === "あり" ? styles.active : ""}`}
+              onClick={() => setAdjuster("あり")}
+            >
+              あり
+            </button>
+            <button
+              type="button"
+              className={`${styles.typeBtn} ${adjuster === "なし" ? styles.active : ""}`}
+              onClick={() => setAdjuster("なし")}
+            >
+              なし
+            </button>
+          </div>
         </div>
 
         <div className={styles.field}>

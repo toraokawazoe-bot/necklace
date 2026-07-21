@@ -9,6 +9,9 @@ export type OrderStatus =
 
 export type ItemType = "ネックレス" | "ブレスレット" | "";
 
+// チェーンの長さ調整金具（アジャスター）を付けるかどうか。
+export type Adjuster = "あり" | "なし" | "";
+
 export type PaymentMethod = "PayPay" | "銀行振込" | "その他" | "";
 
 // 配送業者。追跡URL生成・通知文に使う（storefront の Carrier 型と整合）。
@@ -89,6 +92,7 @@ export interface Order {
   customer: string;
   type: ItemType;
   length: string;
+  adjuster: Adjuster;
   design: string;
   payment: PaymentMethod;
   status: OrderStatus;

@@ -31,6 +31,7 @@ const result = orders.map((o, i) => ({
   status: "制作中",
   memo: "",
   design: "",
+  adjuster: "",
   ...o,
 }));
 
