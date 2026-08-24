@@ -40,3 +40,8 @@ npm start
 ## デプロイ
 
 Vercel に GitHub 連携でデプロイ推奨。
+
+
+## PR練習用の変更
+
+この行はGitHubのPR作成を練習するために追加しました。
