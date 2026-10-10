@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { Order, Settings } from "@/lib/types";
+import { CHANNEL_OPTIONS, Order, Settings } from "@/lib/types";
 import { formatMonth, formatYen, monthKey, summarizeMonth } from "@/lib/pricing";
 import styles from "./SalesHistory.module.css";
 
@@ -44,6 +44,19 @@ export default function SalesHistory({ orders, settings, onClose }: Props) {
       ),
     [summaries]
   );
+
+  // 月ごと・経路ごとの注文件数(注文が入った月で数える。失注は除く)
+  const channelCounts = useMemo(() => {
+    const m: Record<string, Record<string, number>> = {};
+    for (const o of orders) {
+      if (o.status === "失注") continue;
+      const k = monthKey(o.created);
+      const c = o.channel || "未選択";
+      m[k] ??= {};
+      m[k][c] = (m[k][c] ?? 0) + 1;
+    }
+    return m;
+  }, [orders]);
 
   const totalBooked = summaries.reduce((sum, s) => sum + s.bookedAmount, 0);
   const totalPaid = summaries.reduce((sum, s) => sum + s.paidAmount, 0);
@@ -143,6 +156,14 @@ export default function SalesHistory({ orders, settings, onClose }: Props) {
                       <div className={styles.rowSub}>{s.paidCount}件</div>
                     </div>
                   </div>
+                  {channelCounts[s.monthKey] && (
+                    <div className={styles.rowChannels}>
+                      {[...CHANNEL_OPTIONS, "未選択"]
+                        .filter((c) => channelCounts[s.monthKey][c])
+                        .map((c) => `${c} ${channelCounts[s.monthKey][c]}件`)
+                        .join("　")}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

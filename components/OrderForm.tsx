@@ -14,6 +14,8 @@ import {
   STATUS_LIST,
   ADVANCE_FLOW,
   IgMessageDoc,
+  Channel,
+  CHANNEL_OPTIONS,
 } from "@/lib/types";
 import { formatDate, formatDateTime, subscribeThreadMessages } from "@/lib/storage";
 import { getIdToken, logout } from "@/lib/authClient";
@@ -71,6 +73,10 @@ export default function OrderForm({ order, settings, avgDays, onSave, onDelete, 
   const [adjuster, setAdjuster] = useState<Adjuster>(order.adjuster ?? "");
   const [design, setDesign] = useState(order.design);
   const [payment, setPayment] = useState<PaymentMethod>(order.payment);
+  // Instagram の DM から自動で入った注文は、最初から「Instagram」を選んだ状態にする。
+  const [channel, setChannel] = useState<Channel>(
+    order.channel ?? (order.source === "instagram" ? "Instagram" : "")
+  );
   const [status, setStatus] = useState<OrderStatus>(order.status);
   const [memo, setMemo] = useState(order.memo);
   const [priceInput, setPriceInput] = useState<string>(
@@ -231,6 +237,8 @@ export default function OrderForm({ order, settings, avgDays, onSave, onDelete, 
       status,
       memo: memo.trim(),
     };
+    if (channel) next.channel = channel;
+    else delete next.channel;
     // フォームを開いて保存した時点で「対応済み」とみなす。
     delete next.needsResponse;
     if (screenshot) {
@@ -364,6 +372,25 @@ export default function OrderForm({ order, settings, avgDays, onSave, onDelete, 
               自分が呼びやすい名前を自由に入力（相手の実際のIDは上の「現在のID」）
             </div>
           )}
+        </div>
+
+        <div className={styles.field}>
+          <label className={styles.label}>どこから来た注文？</label>
+          <div className={styles.typeGrid3}>
+            {CHANNEL_OPTIONS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                className={`${styles.typeBtn} ${channel === c ? styles.active : ""}`}
+                onClick={() => setChannel(channel === c ? "" : c)}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+          <div className={styles.hint}>
+            TikTokやスレッズを見てInstagramにDMをくれた人は、見たほう(TikTok・スレッズ)を選ぶ
+          </div>
         </div>
 
         {isInstagram && (

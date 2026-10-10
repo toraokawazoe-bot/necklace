@@ -207,6 +207,13 @@
   gap: 8px;
 }
 
+.rowChannels {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.7;
+  opacity: 0.75;
+}
+
 .row {
   background: var(--surface);
   border: 1px solid var(--border);

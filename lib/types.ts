@@ -12,6 +12,18 @@ export type ItemType = "ネックレス" | "ブレスレット" | "";
 // チェーンの長さ調整金具（アジャスター）を付けるかどうか。
 export type Adjuster = "あり" | "なし" | "";
 
+// 注文がどこから来たか。月ごとに数えて、どこに時間を使うかを決めるために記録する。
+export type Channel = "Instagram" | "TikTok" | "スレッズ" | "ポップアップ" | "知り合い" | "その他" | "";
+
+export const CHANNEL_OPTIONS: Exclude<Channel, "">[] = [
+  "Instagram",
+  "TikTok",
+  "スレッズ",
+  "ポップアップ",
+  "知り合い",
+  "その他",
+];
+
 export type PaymentMethod = "PayPay" | "銀行振込" | "その他" | "";
 
 // 配送業者。追跡URL生成・通知文に使う（storefront の Carrier 型と整合）。
@@ -95,6 +107,8 @@ export interface Order {
   adjuster: Adjuster;
   design: string;
   payment: PaymentMethod;
+  // どこから来た注文か。未設定は「未選択」として数える。
+  channel?: Channel;
   status: OrderStatus;
   memo: string;
   screenshot?: string;
