@@ -341,6 +341,11 @@ export interface SnsPostRecord {
   views: number | null;
   saves: number | null;
   legacy?: boolean; // 旧 settings/sns.posts から写したもの
+  // 「写真から提案」(AI)を使ったか(docs/sns-spec.md §4-E)
+  ai_used?: boolean;
+  ai_format_id?: string; // AIが提案した型
+  final_format_id?: string; // 最終的に選んだ型
+  hook_source?: "AI案" | "テンプレ" | "自分"; // 採用した1枚目の文字の出どころ
 }
 
 export type SnsWeekday = "月" | "火" | "水" | "木" | "金" | "土" | "日";

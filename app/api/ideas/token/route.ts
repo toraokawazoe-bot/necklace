@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getAdminAuth } from "@/lib/firebaseAdmin";
+import { verifyOwner } from "@/lib/serverAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,21 +13,14 @@ function json(body: unknown, status = 200) {
 
 /**
  * 「共有ボタンの設定」画面に共有用トークン(環境変数 IDEAS_TOKEN)を返す。
- * ログイン必須が有効なら、Firebase の ID トークンを Admin SDK で確かめた運用者だけに返す。
+ * ログイン必須が有効なら、Firebase の ID トークンを Admin SDK で確かめ、
+ * uid が OWNER_UID と一致する運用者だけに返す(OWNER_UID 未設定なら誰にも返さない)。
  * ログイン必須が無効な間は、アプリ本体(注文データ含む)と同じく誰でも開ける状態なので同じ扱い。
  */
 export async function POST(req: NextRequest) {
   if (REQUIRE_AUTH) {
-    const authz = req.headers.get("authorization") ?? "";
-    const idToken = authz.startsWith("Bearer ") ? authz.slice(7).trim() : "";
-    if (!idToken) return json({ ok: false, error: "unauthorized" }, 401);
-    try {
-      const decoded = await getAdminAuth().verifyIdToken(idToken);
-      const ownerUid = process.env.OWNER_UID;
-      if (ownerUid && decoded.uid !== ownerUid) return json({ ok: false, error: "forbidden" }, 403);
-    } catch {
-      return json({ ok: false, error: "unauthorized" }, 401);
-    }
+    const check = await verifyOwner(req.headers.get("authorization"));
+    if (!check.ok) return json({ ok: false, error: check.error }, check.status);
   }
   const token = process.env.IDEAS_TOKEN;
   if (!token) return json({ ok: false, error: "not_configured" }, 503);

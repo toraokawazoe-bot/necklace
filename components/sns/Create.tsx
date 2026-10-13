@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { SNS_PLACES, SNS_PLACE_LABEL, SnsIdea, SnsPlace, SnsPolicy, SnsPostRecord, isInstagramPost } from "@/lib/types";
-import { addPost, fromLocalInput, judgeFormats, toLocalInput, updateIdea } from "@/lib/sns";
+import { addPost, fromLocalInput, judgeFormats, toLocalInput, updateIdea, weekRange } from "@/lib/sns";
 import {
   CAPTION_TEMPLATES,
   FORMAT_CARDS,
@@ -21,6 +21,7 @@ import {
   templateFields,
 } from "@/lib/snsKnowledge";
 import { Chips, CopyButton } from "./common";
+import AiSuggest, { AiApplied } from "./AiSuggest";
 import styles from "../SnsPlan.module.css";
 
 export interface CreatePreset {
@@ -69,6 +70,8 @@ export default function Create({ policy, posts, ideas, preset, onLogged }: Props
   const [notice, setNotice] = useState(false);
   const [memo, setMemo] = useState("");
   const [saving, setSaving] = useState(false);
+  // 「写真から提案」を使ったとき(記録用。§4-E)
+  const [ai, setAi] = useState<{ formatId: string; hookCandidates: string[] } | null>(null);
 
   const fmt = findFormat(formatId);
 
@@ -135,6 +138,29 @@ export default function Create({ policy, posts, ideas, preset, onLogged }: Props
 
   const toggleTag = (t: string) => setTags((xs) => (xs.indexOf(t) === -1 ? [...xs, t] : xs.filter((x) => x !== t)));
 
+  // 今週すでに記録した告知・販売の投稿(AIに渡す。§4-A-9)
+  const noticeThisWeek = useMemo(() => {
+    const w = weekRange(Date.now());
+    return posts.filter((p) => p.notice && p.ts >= w.start && p.ts < w.end).length;
+  }, [posts]);
+
+  const applyAi = (a: AiApplied) => {
+    const f = findFormat(a.formatId);
+    if (f) chooseFormat(f);
+    setHook(a.hook);
+    setKeyword(a.keyword);
+    setFields((m) => omit(m, ["一言", "型の一言", "キーワード"]));
+    setAi({ formatId: a.formatId, hookCandidates: a.hookCandidates });
+  };
+
+  const hookSource = (h: string): "AI案" | "テンプレ" | "自分" | undefined => {
+    const t = h.trim();
+    if (!t) return undefined;
+    if (ai && ai.hookCandidates.indexOf(t) !== -1) return "AI案";
+    if (Object.keys(HOOKS).some((c) => HOOKS[c as HookCat].indexOf(t) !== -1)) return "テンプレ";
+    return "自分";
+  };
+
   const adoptable = ideas.filter((i) => i.status === "採用" || i.id === ideaId);
 
   const log = async () => {
@@ -154,6 +180,10 @@ export default function Create({ policy, posts, ideas, preset, onLogged }: Props
         notice,
         views: null,
         saves: null,
+        ai_used: !!ai,
+        ai_format_id: ai?.formatId,
+        final_format_id: fmt?.id,
+        hook_source: hookSource(hook),
       });
       if (ideaId) {
         await updateIdea(ideaId, { status: "投稿済み", postId: id }).catch((e) => console.error("idea update failed", e));
@@ -163,6 +193,7 @@ export default function Create({ policy, posts, ideas, preset, onLogged }: Props
       setMemo("");
       setHook("");
       setFields({});
+      setAi(null);
       setLogTs(toLocalInput(Date.now()));
       onLogged();
     } catch (e) {
@@ -175,6 +206,8 @@ export default function Create({ policy, posts, ideas, preset, onLogged }: Props
 
   return (
     <>
+      <AiSuggest noticeThisWeek={noticeThisWeek} onApply={applyAi} />
+
       <section className={styles.card}>
         <div className={styles.topBar}>
           <h3 className={styles.h3}>1. 型を選ぶ</h3>
@@ -376,9 +409,6 @@ export default function Create({ policy, posts, ideas, preset, onLogged }: Props
         {unfilled.length > 0 && <div className={styles.warnText}>まだ埋まっていない欄:{unfilled.join("・")}</div>}
         <div className={styles.addRow}>
           <CopyButton text={caption} label="文章をコピー" />
-          <button type="button" className={styles.secondary} disabled title="準備中">
-            AIに案を出してもらう(準備中)
-          </button>
         </div>
       </section>
 
@@ -408,6 +438,7 @@ export default function Create({ policy, posts, ideas, preset, onLogged }: Props
         <div className={styles.dim}>
           {SNS_PLACE_LABEL[place]}/{fmt ? fmt.name : "型なし"}
           {keyword ? `/${keyword}` : ""}
+          {ai ? "/AIの提案を使用" : ""}
         </div>
         {!fmt && (
           <label className={styles.label}>

@@ -20,6 +20,7 @@ import {
   fmtDateTime,
   fmtNum,
   judgeFormats,
+  median,
   needsNumbers,
   pct,
   saveKpt,
@@ -102,6 +103,24 @@ export default function Review({ policy, posts, orders, kpt, legacyStats, ready,
   const missingCount = feed.filter((p) => needsNumbers(p, now)).length;
 
   const judged = judgeFormats(posts);
+
+  // AI案(写真から提案)を使った投稿と、使わなかった投稿の比べ(§4-E。比べる欄を足すだけ)
+  const aiRows = [
+    { label: "AI案を使った投稿", ps: feed.filter((p) => p.ai_used === true) },
+    { label: "自分で作った投稿", ps: feed.filter((p) => p.ai_used !== true) },
+  ].map(({ label, ps }) => {
+    const withViews = ps.filter((p) => typeof p.views === "number");
+    const rates = withViews
+      .filter((p) => (p.views as number) > 0 && typeof p.saves === "number")
+      .map((p) => (p.saves as number) / (p.views as number));
+    return {
+      label,
+      total: ps.length,
+      count: withViews.length,
+      medianViews: median(withViews.map((p) => p.views as number)),
+      medianSaveRate: median(rates),
+    };
+  });
 
   const saveNum = (p: SnsPostRecord, key: "views" | "saves", v: number | null) => {
     if (p[key] === v) return;
@@ -269,6 +288,25 @@ export default function Review({ policy, posts, orders, kpt, legacyStats, ready,
           </ul>
         </details>
       </section>
+
+      {aiRows[0].total > 0 && (
+        <section className={styles.card}>
+          <h3 className={styles.h3}>AI案と自分で作った投稿の比べ</h3>
+          <div className={styles.note}>「写真から提案」を使った投稿と、使わなかった投稿の数字です(判定のきまりは変えません)。</div>
+          <ul className={styles.list}>
+            {aiRows.map((r) => (
+              <li key={r.label} className={styles.formatStat}>
+                <strong>{r.label}</strong>
+                <div className={styles.dim}>
+                  本数 {r.count}
+                  {r.total !== r.count ? `(記録${r.total})` : ""}/再生の中央値 {r.medianViews == null ? "—" : fmtNum(Math.round(r.medianViews))}/保存率の中央値{" "}
+                  {r.medianSaveRate == null ? "—" : `${(r.medianSaveRate * 100).toFixed(1)}%`}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className={styles.card}>
         <h3 className={styles.h3}>週の合計</h3>

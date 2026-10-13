@@ -1,15 +1,14 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 認証済みユーザー（＝運用者）のみ読み書きを許可する。
-    // webhook / 送信 API などサーバー側は Admin SDK を使うため、このルールを
-    // バイパスして書き込める（ルールは「ブラウザからの直接アクセス」だけを縛る）。
-    //
-    // さらに運用者1人だけに絞るなら、下を次のように UID 固定にする:
-    //   allow read, write: if request.auth != null
-    //     && request.auth.uid == 'ここに運用者のUID';
+    // 運用者(しおん)1人だけが読み書きできる。UID は Firebase Authentication → Users のもの。
+    // webhook(Instagram)・共有ボタン(/api/ideas)・写真から提案(/api/sns/suggest)などのサーバー側は
+    // Admin SDK(サービスアカウント)で書くため、このルールをバイパスして動く。
+    // このルールは「ブラウザからの直接アクセス」だけを縛る。
+    // 運用者を増やすときは、その人の UID を || で足す。
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if request.auth != null
+        && request.auth.uid == "nEbNzVVqayaNlWy4vNsbaNeO5gL2";
     }
   }
 }
