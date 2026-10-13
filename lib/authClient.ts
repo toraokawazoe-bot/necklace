@@ -43,3 +43,22 @@ export async function getIdToken(forceRefresh = false): Promise<string | null> {
   const u = auth.currentUser;
   return u ? u.getIdToken(forceRefresh) : null;
 }
+
+// 画面を開いた直後は Firebase がログイン状態を復元している最中で currentUser が null のことがある。
+// 復元が終わるまで(最長 timeoutMs)待ってから ID トークンを返す。
+export async function getIdTokenWhenReady(timeoutMs = 8000): Promise<string | null> {
+  if (!auth.currentUser) {
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(() => {
+        unsub();
+        resolve();
+      }, timeoutMs);
+      const unsub = onAuthStateChanged(auth, () => {
+        clearTimeout(timer);
+        unsub();
+        resolve();
+      });
+    });
+  }
+  return getIdToken();
+}

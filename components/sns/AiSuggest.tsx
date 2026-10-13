@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { getIdToken } from "@/lib/authClient";
+import { getIdToken, getIdTokenWhenReady } from "@/lib/authClient";
 import { resizeForAi } from "@/lib/image";
 import { IG_HASHTAG_MAX, findFormat } from "@/lib/snsKnowledge";
 import { CopyButton } from "./common";
@@ -52,6 +52,7 @@ interface Status {
   stopped: boolean;
   used: number | null;
   cap: number;
+  reason?: "login" | "forbidden" | "off" | "net";
 }
 
 interface Props {
@@ -81,9 +82,9 @@ export default function AiSuggest({ noticeThisWeek, onApply }: Props) {
     let alive = true;
     (async () => {
       try {
-        const idToken = await getIdToken().catch(() => null);
+        const idToken = await getIdTokenWhenReady().catch(() => null);
         if (!idToken) {
-          if (alive) setStatus({ available: false, stopped: false, used: null, cap: 20 });
+          if (alive) setStatus({ available: false, stopped: false, used: null, cap: 20, reason: "login" });
           return;
         }
         const res = await fetch("/api/sns/suggest", {
@@ -95,9 +96,9 @@ export default function AiSuggest({ noticeThisWeek, onApply }: Props) {
         const b = (await res.json().catch(() => ({}))) as Partial<Status> & { ok?: boolean };
         if (!alive) return;
         if (res.ok && b.ok) setStatus({ available: !!b.available, stopped: !!b.stopped, used: b.used ?? null, cap: b.cap ?? 20 });
-        else setStatus({ available: false, stopped: false, used: null, cap: 20 });
+        else setStatus({ available: false, stopped: false, used: null, cap: 20, reason: res.status === 401 ? "login" : res.status === 403 ? "forbidden" : res.status === 503 ? "off" : "net" });
       } catch {
-        if (alive) setStatus({ available: false, stopped: false, used: null, cap: 20 });
+        if (alive) setStatus({ available: false, stopped: false, used: null, cap: 20, reason: "net" });
       }
     })();
     return () => {
@@ -133,7 +134,13 @@ export default function AiSuggest({ noticeThisWeek, onApply }: Props) {
   const disabledReason = !status
     ? "確認中…"
     : !status.available
-    ? "AIは準備中です"
+    ? status.reason === "login"
+      ? "ログインし直してから開き直してください"
+      : status.reason === "forbidden"
+      ? "このアカウントでは使えません"
+      : status.reason === "net"
+      ? "通信できませんでした。画面を開き直してください"
+      : "AIの設定が未完了です。とらおさんに連絡してください"
     : status.stopped
     ? "AIの無料枠の上限に達したため、今日はここまで。明日また使えます。"
     : status.used != null && status.used >= status.cap
@@ -147,7 +154,7 @@ export default function AiSuggest({ noticeThisWeek, onApply }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const idToken = await getIdToken().catch(() => null);
+      const idToken = await getIdTokenWhenReady().catch(() => null);
       if (!idToken) {
         setError("ログインしてから使ってください。");
         return;
