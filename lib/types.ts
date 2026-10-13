@@ -224,3 +224,55 @@ export interface Settings {
 export const EMPTY_SETTINGS: Settings = {
   monthlyPrices: {},
 };
+
+// ---- SNS運用タブ ----
+// 保存先: Firestore settings/sns（既存の settings コレクション内。ルール変更不要）
+export type SnsPlatform = "tiktok" | "igFeed" | "igStory";
+
+export const SNS_PLATFORM_LABEL: Record<SnsPlatform, string> = {
+  tiktok: "TikTok",
+  igFeed: "Instagramフィード・リール",
+  igStory: "ストーリーズ",
+};
+
+export interface SnsContentType {
+  id: string;
+  label: string;
+  desc: string;
+  enabled: boolean;
+}
+
+export interface SnsPost {
+  id: string;
+  ts: number;
+  platform: SnsPlatform;
+  contentType: string; // SnsContentType.label
+  memo: string;
+}
+
+// 毎週の数字。未入力は null。
+export interface SnsWeeklyStat {
+  weekStart: string; // その週の月曜 "YYYY-MM-DD"（日本時間）
+  tiktokViews: number | null;
+  tiktokSaves: number | null;
+  tiktokSearchPct: number | null;
+  igReelSends: number | null;
+  igReelReach: number | null;
+  igProfileVisits: number | null;
+  igLinkTaps: number | null;
+  memo: string;
+}
+
+export interface SnsPlanData {
+  tiktokPerWeek: number;
+  tiktokVideoPerWeek: number;
+  igFeedPerWeek: number;
+  igReelPerWeek: number;
+  igStoryPerDay: number;
+  postTime: string;
+  restDay: string;
+  contentTypes: SnsContentType[];
+  keywords: string[];
+  posts: SnsPost[];
+  stats: Record<string, SnsWeeklyStat>;
+}

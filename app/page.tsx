@@ -28,6 +28,8 @@ import OrderCard from "@/components/OrderCard";
 import OrderForm from "@/components/OrderForm";
 import SettingsPanel from "@/components/Settings";
 import SalesHistory from "@/components/SalesHistory";
+import SnsPlan from "@/components/SnsPlan";
+import MenuDrawer, { Tab, loadTab, saveTab } from "@/components/MenuDrawer";
 import styles from "./page.module.css";
 
 type Filter = "all" | OrderStatus;
@@ -77,6 +79,21 @@ export default function Home() {
   const [migrationNotice, setMigrationNotice] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<Tab>("orders");
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => {
+    setTab(loadTab());
+  }, []);
+  const selectTab = (t: Tab) => {
+    setMenuOpen(false);
+    // 売上・設定は従来どおりのモーダルで開く。注文・SNS運用はメイン画面を切り替える。
+    if (t === "sales") setShowHistory(true);
+    else if (t === "settings") setShowSettings(true);
+    else {
+      setTab(t);
+      saveTab(t);
+    }
+  };
 
   useEffect(() => {
     let unsubOrders: (() => void) | undefined;
@@ -290,19 +307,12 @@ export default function Home() {
           <span className={styles.count}>{orders.length}件</span>
           <button
             className={styles.settingsBtn}
-            onClick={() => setShowHistory(true)}
-            aria-label="売上履歴"
-            title="売上履歴"
+            onClick={() => setMenuOpen(true)}
+            aria-label="メニューを開く"
+            aria-expanded={menuOpen}
+            title="メニュー"
           >
-            📅
-          </button>
-          <button
-            className={styles.settingsBtn}
-            onClick={() => setShowSettings(true)}
-            aria-label="設定"
-            title="設定（価格・バックアップ・ステータスの説明）"
-          >
-            ⚙
+            ☰
           </button>
           {REQUIRE_AUTH && (
             <button
@@ -317,6 +327,10 @@ export default function Home() {
         </div>
       </header>
 
+      {tab === "sns" && <SnsPlan orders={orders} />}
+
+      {tab === "orders" && (
+      <>
       <section className={styles.salesCard}>
         <div className={styles.salesNav}>
           <button
@@ -461,6 +475,16 @@ export default function Home() {
           />
         ))}
       </div>
+
+      </>
+      )}
+
+      <MenuDrawer
+        open={menuOpen}
+        current={tab}
+        onSelect={selectTab}
+        onClose={() => setMenuOpen(false)}
+      />
 
       {editing && (
         <OrderForm
