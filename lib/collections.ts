@@ -16,3 +16,10 @@ export const SEED_META_DOC = "seed";
 export const ORDER_SEQ_DOC = "orderSeq";
 // 旧7ステータス→新6段階+失注への移行が完了したかのフラグ（meta/statusMigration = { migrated }）。
 export const STATUS_MIGRATION_DOC = "statusMigration";
+
+// SNS運用タブ(1件=1ドキュメント)
+export const SNS_IDEAS = "sns_ideas";
+export const SNS_IDEA_IMAGES = "sns_idea_images"; // スクショ本体(アイデア一覧を軽く保つため別ドキュメント)
+export const SNS_POSTS = "sns_posts";
+// SNSの方針・旧データ(settings/sns)
+export const SNS_SETTINGS_DOC = "sns";

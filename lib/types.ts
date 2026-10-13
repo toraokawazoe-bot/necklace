@@ -276,3 +276,92 @@ export interface SnsPlanData {
   posts: SnsPost[];
   stats: Record<string, SnsWeeklyStat>;
 }
+
+// ---- SNS運用タブ(2026-10 作り直し) ----
+// 方針: settings/sns の policy / kpt フィールド。
+// アイデア: sns_ideas コレクション(1件=1ドキュメント)。スクショ本体は sns_idea_images/{ideaId}。
+// 投稿記録: sns_posts コレクション(1件=1ドキュメント)。
+// 旧データ(settings/sns の posts / stats ほか)は消さずに残す。posts は sns_posts へ一度だけ写す。
+
+// 投稿した場所
+export type SnsPlace = "tiktokPhoto" | "tiktokVideo" | "igFeed" | "igReel" | "igStory";
+
+export const SNS_PLACES: SnsPlace[] = ["tiktokPhoto", "tiktokVideo", "igFeed", "igReel", "igStory"];
+
+export const SNS_PLACE_LABEL: Record<SnsPlace, string> = {
+  tiktokPhoto: "TikTok写真",
+  tiktokVideo: "TikTok動画",
+  igFeed: "Instagramフィード",
+  igReel: "リール",
+  igStory: "ストーリーズ",
+};
+
+export function isTikTok(p: SnsPlace): boolean {
+  return p === "tiktokPhoto" || p === "tiktokVideo";
+}
+export function isInstagramPost(p: SnsPlace): boolean {
+  return p === "igFeed" || p === "igReel";
+}
+
+export type SnsIdeaStatus = "未仕分け" | "採用" | "投稿済み" | "却下";
+export const SNS_IDEA_STATUSES: SnsIdeaStatus[] = ["未仕分け", "採用", "投稿済み", "却下"];
+
+export type SnsEffort = "S" | "M" | "L" | "";
+
+export interface SnsIdea {
+  id: string;
+  created: number;
+  updated?: number;
+  text: string;
+  url?: string;
+  // スクショがあるか。本体は sns_idea_images/{id} の data(画像のdataURL)。
+  hasImage?: boolean;
+  source: "app" | "ios-share";
+  status: SnsIdeaStatus;
+  formatId?: string; // 型カードの id(lib/snsKnowledge.ts)
+  season?: string;
+  effort?: SnsEffort;
+  impact?: number | null; // 影響 1〜5
+  ease?: number | null; // 手軽さ 1〜5
+  postId?: string; // 投稿済みにした投稿
+}
+
+export interface SnsPostRecord {
+  id: string;
+  ts: number; // 投稿日時
+  place: SnsPlace;
+  formatId?: string;
+  formatLabel: string;
+  hook?: string;
+  keyword?: string;
+  ideaId?: string;
+  memo?: string;
+  wearing?: boolean; // 1枚目に人が着けた姿
+  notice?: boolean; // 告知・販売の投稿
+  views: number | null;
+  saves: number | null;
+  legacy?: boolean; // 旧 settings/sns.posts から写したもの
+}
+
+export type SnsWeekday = "月" | "火" | "水" | "木" | "金" | "土" | "日";
+export const SNS_WEEKDAYS: SnsWeekday[] = ["月", "火", "水", "木", "金", "土", "日"];
+
+export interface SnsPolicy {
+  tiktokPerWeek: number;
+  igPerWeek: number;
+  igReelPerWeek: number;
+  storiesPerDay: number;
+  wearingMinPct: number; // 「人が着けた姿」を何%以上
+  noticeMaxPerWeek: number;
+  postTime: string;
+  restDays: SnsWeekday[];
+  schedule: Record<SnsWeekday, SnsPlace[]>; // 曜日ごとの予定投稿
+  pillars: { wear: number; buy: number; daily: number; learn: number }; // 型の割合(%)
+  keywords: string[];
+}
+
+export interface SnsKpt {
+  keep: string;
+  problem: string;
+  try: string;
+}
