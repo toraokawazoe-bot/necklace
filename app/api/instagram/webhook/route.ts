@@ -41,6 +41,15 @@ export async function POST(req: NextRequest) {
     if (!verifyInstagramSignature(raw, signature, appSecret)) {
       return new Response("Invalid signature", { status: 403 });
     }
+  } else if (
+    process.env.VERCEL_ENV === "production" ||
+    process.env.NODE_ENV === "production"
+  ) {
+    // 本番で署名検証なしに書き込むと偽DM・偽注文を受け付けてしまうため拒否する。
+    console.error(
+      "[instagram webhook] INSTAGRAM_APP_SECRET 未設定の本番のため POST を拒否しました"
+    );
+    return new Response("Service Unavailable", { status: 503 });
   } else {
     console.warn(
       "[instagram webhook] INSTAGRAM_APP_SECRET 未設定のため署名検証をスキップしています（開発用）"
