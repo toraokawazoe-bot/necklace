@@ -1,10 +1,10 @@
 // サーバー専用: ブラウザから届いた Firebase ID トークンを確かめ、運用者本人(OWNER_UID)かを判定する。
 // instagram/send と同じ考え方。OWNER_UID が未設定のときは「誰でも」にせず失敗させる(fail closed)。
-import { getAdminAuth, getAdminProjectId, isAdminConfigured } from "./firebaseAdmin";
+import { getAdminAuth, isAdminConfigured } from "./firebaseAdmin";
 
 export type OwnerCheck =
   | { ok: true; uid: string }
-  | { ok: false; status: number; error: "unauthorized" | "forbidden" | "not_configured"; reason?: string; adminProjectId?: string | null };
+  | { ok: false; status: number; error: "unauthorized" | "forbidden" | "not_configured" };
 
 export async function verifyOwner(authorization: string | null): Promise<OwnerCheck> {
   const ownerUid = process.env.OWNER_UID;
@@ -21,10 +21,6 @@ export async function verifyOwner(authorization: string | null): Promise<OwnerCh
     const code = typeof err.code === "string" ? err.code : "unknown";
     const msg = String(err.message ?? "").replace(/eyJ[\w-]+\.[\w-]+\.[\w-]*/g, "[token]").slice(0, 300);
     console.error("[verifyOwner]", code, msg);
-    // 診断用: エラーコードと、メッセージ中のプロジェクトIDだけを返す（トークン・鍵・メールは含めない）
-    const aud = /expected\s+"?([a-z0-9-]+)"?/i.exec(msg)?.[1];
-    const got = /but got\s+"?([a-z0-9-]+)"?/i.exec(msg)?.[1];
-    const reason = aud || got ? `${code} (expected ${aud ?? "?"} got ${got ?? "?"})` : code;
-    return { ok: false, status: 401, error: "unauthorized", reason, adminProjectId: getAdminProjectId() };
+    return { ok: false, status: 401, error: "unauthorized" };
   }
 }

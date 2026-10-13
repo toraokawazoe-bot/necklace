@@ -21,7 +21,7 @@ import {
   templateFields,
 } from "@/lib/snsKnowledge";
 import { Chips, CopyButton } from "./common";
-import AiSuggest, { AiApplied } from "./AiSuggest";
+import type { AiApplied } from "./AiSuggest";
 import styles from "../SnsPlan.module.css";
 
 export interface CreatePreset {
@@ -206,8 +206,6 @@ export default function Create({ policy, posts, ideas, preset, onLogged }: Props
 
   return (
     <>
-      <AiSuggest noticeThisWeek={noticeThisWeek} onApply={applyAi} />
-
       <section className={styles.card}>
         <div className={styles.topBar}>
           <h3 className={styles.h3}>1. 型を選ぶ</h3>

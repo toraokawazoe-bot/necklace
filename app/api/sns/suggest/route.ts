@@ -62,17 +62,15 @@ function geminiFailure(r: Exclude<GeminiResult, { kind: "ok" }>): Response {
  * 受け取った写真は保存しない(Gemini に渡したら捨てる)。注文・お客さんのデータは読まない。
  */
 export async function POST(req: NextRequest) {
+  // 2026-10: 「写真から提案(AI)」は使わない方針のため無効化(復活時はこの1行と下の _POST の呼び出しを戻す)
+  return json({ ok: false, error: "disabled" }, 410);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function _POST(req: NextRequest) {
   const started = Date.now();
   const who = await verifyOwner(req.headers.get("authorization"));
-  if (!who.ok) {
-    if (who.reason) {
-      return json(
-        { ok: false, error: who.error, message: MSG[who.error], reason: who.reason, adminProjectId: who.adminProjectId ?? null },
-        who.status
-      );
-    }
-    return fail(who.error, who.status);
-  }
+  if (!who.ok) return fail(who.error, who.status);
 
   const raw = await req.text().catch(() => "");
   if (raw.length > MAX_BODY_CHARS) return fail("too_large", 413);

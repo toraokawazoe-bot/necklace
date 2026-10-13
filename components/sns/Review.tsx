@@ -104,7 +104,7 @@ export default function Review({ policy, posts, orders, kpt, legacyStats, ready,
 
   const judged = judgeFormats(posts);
 
-  // AI案(写真から提案)を使った投稿と、使わなかった投稿の比べ(§4-E。比べる欄を足すだけ)
+  // AI案を使った投稿と、使わなかった投稿の比べ(§4-E。比べる欄を足すだけ)
   const aiRows = [
     { label: "AI案を使った投稿", ps: feed.filter((p) => p.ai_used === true) },
     { label: "自分で作った投稿", ps: feed.filter((p) => p.ai_used !== true) },
@@ -292,7 +292,7 @@ export default function Review({ policy, posts, orders, kpt, legacyStats, ready,
       {aiRows[0].total > 0 && (
         <section className={styles.card}>
           <h3 className={styles.h3}>AI案と自分で作った投稿の比べ</h3>
-          <div className={styles.note}>「写真から提案」を使った投稿と、使わなかった投稿の数字です(判定のきまりは変えません)。</div>
+          <div className={styles.note}>AI案を使った過去の投稿と、使わなかった投稿の数字です(判定のきまりは変えません)。</div>
           <ul className={styles.list}>
             {aiRows.map((r) => (
               <li key={r.label} className={styles.formatStat}>
