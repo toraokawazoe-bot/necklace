@@ -15,11 +15,37 @@ let cachedApp: App | null = null;
 
 function parseServiceAccount(raw: string): Record<string, unknown> {
   // 生 JSON でも base64 エンコード JSON でも受け付ける（Vercel の環境変数運用差を吸収）。
-  const trimmed = raw.trim();
+  let trimmed = raw.trim();
+  // 前後に余計な引用符が付いて貼られた場合の保険
+  if (trimmed.length > 1 && trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed[1] === "{") {
+    trimmed = trimmed.slice(1, -1).replace(/\\"/g, '"');
+  }
   const text = trimmed.startsWith("{")
     ? trimmed
     : Buffer.from(trimmed, "base64").toString("utf8");
-  return JSON.parse(text) as Record<string, unknown>;
+  try {
+    return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    // private_key 内に生の改行が入ったまま貼られた場合: 文字列内の制御文字をエスケープして再試行
+    const fixed = text.replace(/\r?\n/g, "\\n");
+    return JSON.parse(fixed) as Record<string, unknown>;
+  }
+}
+
+let cachedProjectId: string | null = null;
+
+// 診断用: サービスアカウントの project_id（秘密ではない）。取得できなければ null。
+export function getAdminProjectId(): string | null {
+  if (cachedProjectId) return cachedProjectId;
+  try {
+    const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (!raw) return null;
+    const pid = parseServiceAccount(raw).project_id;
+    cachedProjectId = typeof pid === "string" ? pid : null;
+    return cachedProjectId;
+  } catch {
+    return null;
+  }
 }
 
 function getAdminApp(): App {
@@ -36,14 +62,21 @@ function getAdminApp(): App {
     );
   }
   const sa = parseServiceAccount(raw);
+  const projectId = sa.project_id as string;
+  const clientProjectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  if (clientProjectId && projectId !== clientProjectId) {
+    console.error(
+      `[firebaseAdmin] project_id 不一致: service account=${projectId} / NEXT_PUBLIC_FIREBASE_PROJECT_ID=${clientProjectId}`
+    );
+  }
   cachedApp = initializeApp({
     credential: cert({
-      projectId: sa.project_id as string,
+      projectId,
       clientEmail: sa.client_email as string,
-      // JSON.parse 済みなので private_key は通常そのまま使える（この replace は no-op）。
-      // env に二重エスケープ（\\n がリテラルで残る）された鍵を貼った場合の保険として残す。
+      // 二重エスケープ（\\n がリテラルで残る）された鍵への保険。
       privateKey: (sa.private_key as string)?.replace(/\\n/g, "\n"),
     }),
+    projectId,
   });
   return cachedApp;
 }

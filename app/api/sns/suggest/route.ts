@@ -64,7 +64,15 @@ function geminiFailure(r: Exclude<GeminiResult, { kind: "ok" }>): Response {
 export async function POST(req: NextRequest) {
   const started = Date.now();
   const who = await verifyOwner(req.headers.get("authorization"));
-  if (!who.ok) return fail(who.error, who.status);
+  if (!who.ok) {
+    if (who.reason) {
+      return json(
+        { ok: false, error: who.error, message: MSG[who.error], reason: who.reason, adminProjectId: who.adminProjectId ?? null },
+        who.status
+      );
+    }
+    return fail(who.error, who.status);
+  }
 
   const raw = await req.text().catch(() => "");
   if (raw.length > MAX_BODY_CHARS) return fail("too_large", 413);
