@@ -86,7 +86,7 @@ export function ProductForm({ product }: { product?: Product }) {
     // 413 などは Vercel が HTML/テキストで返すので、JSON でなくても落ちないようにする
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      if (res.status === 413) throw new Error("画像が大きすぎます（4MB 以下にしてください）");
+      if (res.status === 413) throw new Error("画像が大きすぎます（2MB 以下にしてください）");
       throw new Error(data.error ?? `アップロードに失敗しました（HTTP ${res.status}）`);
     }
     return data.url as string;

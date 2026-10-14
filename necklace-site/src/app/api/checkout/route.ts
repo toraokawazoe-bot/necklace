@@ -82,7 +82,9 @@ export async function POST(req: Request) {
         product_data: {
           name: `${product.name} — ${product.subtitle} ・ ${size}cm`,
           description: `${product.material} / 長さ ${size}cm（アジャスター ±2cm）`,
-          images: [`${origin}${product.image}`],
+          images: [
+            product.image.startsWith("/") ? `${origin}${product.image}` : product.image,
+          ],
         },
       },
     });

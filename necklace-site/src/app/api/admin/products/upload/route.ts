@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { put } from "@vercel/blob";
+import { saveImage } from "@/lib/image-store";
 import { getAdminSession } from "@/lib/admin-session";
 import { enforce, uploadLimiter } from "@/lib/ratelimit";
 
@@ -12,7 +12,8 @@ const ALLOWED_TYPES = new Set([
   "image/webp",
   "image/avif",
 ]);
-const MAX_BYTES = 8 * 1024 * 1024;
+// 管理画面が送信前に 2MB 以下へ縮めるので、それより大きいものは弾く
+const MAX_BYTES = 4 * 1024 * 1024;
 
 export async function POST(req: Request) {
   const session = await getAdminSession();
@@ -48,26 +49,14 @@ export async function POST(req: Request) {
     );
   }
 
-  const ext = file.type.split("/")[1] ?? "bin";
-  const pathname = `products/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-
   try {
-    const blob = await put(pathname, file, {
-      access: "public",
-      contentType: file.type,
-    });
-    return NextResponse.json({ url: blob.url });
+    const url = await saveImage(file);
+    return NextResponse.json({ url });
   } catch (e) {
-    console.error("[upload] blob put failed:", e);
-    // ストア停止は画面からだと原因が分からないので、そのまま伝える
-    const suspended = e instanceof Error && /suspended/i.test(e.message);
+    console.error("[upload] image save failed:", e);
     return NextResponse.json(
-      {
-        error: suspended
-          ? "画像の保存先（Vercel Blob）が停止中です。Vercel の支払い状態を確認してください"
-          : "アップロードに失敗しました",
-      },
-      { status: suspended ? 503 : 500 },
+      { error: "アップロードに失敗しました" },
+      { status: 500 },
     );
   }
 }

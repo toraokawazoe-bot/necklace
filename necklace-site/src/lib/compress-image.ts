@@ -3,7 +3,7 @@
 // iPhone の HEIC も、ブラウザが読めるならここで JPEG に変換される。
 
 const MAX_EDGE = 2000;
-const TARGET_BYTES = 3.5 * 1024 * 1024;
+const TARGET_BYTES = 2 * 1024 * 1024;
 const QUALITIES = [0.85, 0.75, 0.65, 0.55];
 
 const PASSTHROUGH_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);

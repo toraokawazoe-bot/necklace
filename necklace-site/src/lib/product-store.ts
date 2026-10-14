@@ -1,5 +1,6 @@
 import { Redis } from "@upstash/redis";
 import type { Product } from "./products";
+import { resolveLegacyImage } from "./legacy-images";
 
 let _redis: Redis | null = null;
 function getRedis(): Redis | null {
@@ -39,6 +40,8 @@ function parseProduct(raw: unknown): Product | null {
   }
   if (!obj) return null;
   if (!Array.isArray(obj.gallery)) obj.gallery = [];
+  if (typeof obj.image === "string") obj.image = resolveLegacyImage(obj.image);
+  obj.gallery = obj.gallery.map((u) => (typeof u === "string" ? resolveLegacyImage(u) : u));
   return obj;
 }
 
