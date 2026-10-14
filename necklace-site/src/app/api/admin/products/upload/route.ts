@@ -59,9 +59,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ url: blob.url });
   } catch (e) {
     console.error("[upload] blob put failed:", e);
+    // ストア停止は画面からだと原因が分からないので、そのまま伝える
+    const suspended = e instanceof Error && /suspended/i.test(e.message);
     return NextResponse.json(
-      { error: "アップロードに失敗しました" },
-      { status: 500 },
+      {
+        error: suspended
+          ? "画像の保存先（Vercel Blob）が停止中です。Vercel の支払い状態を確認してください"
+          : "アップロードに失敗しました",
+      },
+      { status: suspended ? 503 : 500 },
     );
   }
 }

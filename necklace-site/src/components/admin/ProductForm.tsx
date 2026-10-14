@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { Product } from "@/lib/products";
+import { compressImage } from "@/lib/compress-image";
 
 type FormValues = {
   slug: string;
@@ -77,13 +78,17 @@ export function ProductForm({ product }: { product?: Product }) {
 
   const uploadOne = async (file: File): Promise<string> => {
     const fd = new FormData();
-    fd.append("file", file);
+    fd.append("file", await compressImage(file));
     const res = await fetch("/api/admin/products/upload", {
       method: "POST",
       body: fd,
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+    // 413 などは Vercel が HTML/テキストで返すので、JSON でなくても落ちないようにする
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (res.status === 413) throw new Error("画像が大きすぎます（4MB 以下にしてください）");
+      throw new Error(data.error ?? `アップロードに失敗しました（HTTP ${res.status}）`);
+    }
     return data.url as string;
   };
 
