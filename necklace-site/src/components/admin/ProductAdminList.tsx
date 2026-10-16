@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Product } from "@/lib/products";
 import { formatJPY } from "@/lib/utils";
+import { CATEGORY_OPTIONS, resolveCategory } from "@/lib/product-category";
 
 export function ProductAdminList({ products }: { products: Product[] }) {
   const router = useRouter();
@@ -122,14 +123,17 @@ export function ProductAdminList({ products }: { products: Product[] }) {
                       下書き
                     </span>
                   )}
-                  {!p.inStock && (
+                  {(!p.inStock || (p.stock != null && p.stock <= 0)) && (
                     <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-red-800">
                       売切
                     </span>
                   )}
                 </div>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {p.slug}
+                  {p.slug} ・{" "}
+                  {CATEGORY_OPTIONS.find((c) => c.value === resolveCategory(p.category))?.label}
+                  {" ・ "}
+                  {p.stock == null ? "在庫数: 無制限" : `在庫数: ${p.stock}`}
                 </p>
                 <p className="mt-1 text-sm tabular-nums">
                   {formatJPY(p.price)}

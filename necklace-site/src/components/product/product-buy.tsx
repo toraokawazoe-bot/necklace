@@ -5,15 +5,24 @@ import { Button } from "@/components/ui/button";
 import { SizeGuide } from "@/components/product/size-guide";
 import { useCart } from "@/lib/cart-store";
 import { cn } from "@/lib/utils";
+import {
+  BRACELET_DEFAULT,
+  BRACELET_SIZES,
+  NO_SIZE,
+  NECKLACE_MAX,
+  NECKLACE_MIN,
+  sizeLabel,
+  type ProductCategory,
+} from "@/lib/product-category";
 
 const SIZE_OPTIONS = [
   { cm: 38, label: "首元にフィット", note: "Tシャツの襟ぐりと同じ高さ・女性に多いサイズ" },
   { cm: 41, label: "鎖骨ライン", note: "ゆったり下がる・男性に多いサイズ" },
 ];
 
-// カスタム長さの範囲(チェックアウトAPI側のバリデーションと合わせる)
-const CUSTOM_MIN = 33;
-const CUSTOM_MAX = 50;
+// カスタム長さの範囲(チェックアウトAPI側のバリデーションと合わせる。定義は lib/product-category.ts)
+const CUSTOM_MIN = NECKLACE_MIN;
+const CUSTOM_MAX = NECKLACE_MAX;
 const CUSTOM_SIZES = Array.from(
   { length: CUSTOM_MAX - CUSTOM_MIN + 1 },
   (_, i) => CUSTOM_MIN + i,
@@ -21,18 +30,25 @@ const CUSTOM_SIZES = Array.from(
 
 export function ProductBuy({
   productId,
+  category = "necklace",
   disabled,
 }: {
   productId: string;
+  category?: ProductCategory;
   disabled?: boolean;
 }) {
-  const [size, setSize] = useState<number>(38);
+  const [size, setSize] = useState<number>(
+    category === "bracelet" ? BRACELET_DEFAULT : 38,
+  );
   const [isCustom, setIsCustom] = useState(false);
   const [customSize, setCustomSize] = useState<number>(40);
   const [adding, setAdding] = useState(false);
   const add = useCart((s) => s.add);
 
-  const effectiveSize = isCustom ? customSize : size;
+  // メガネチェーンは長さ選択なし(カート上の size は 0)
+  const effectiveSize =
+    category === "glasses-chain" ? NO_SIZE : isCustom ? customSize : size;
+  const effectiveLabel = sizeLabel(category, effectiveSize);
 
   const handleAdd = () => {
     if (disabled) return;
@@ -43,6 +59,42 @@ export function ProductBuy({
 
   return (
     <div>
+      {category === "bracelet" && (
+        <div>
+          <p
+            className="font-marker text-[20px] leading-none md:text-[22px]"
+            style={{ color: "var(--bead-olive)" }}
+          >
+            サイズを選ぶ
+          </p>
+          <div className="mt-3 grid grid-cols-4 gap-2.5">
+            {BRACELET_SIZES.map((cm) => (
+              <button
+                key={cm}
+                onClick={() => setSize(cm)}
+                disabled={disabled}
+                aria-pressed={size === cm}
+                className={cn(
+                  "flex items-center justify-center border px-2 py-3 transition-colors",
+                  size === cm
+                    ? "border-foreground bg-foreground text-background"
+                    : "border-border hover:border-foreground/60",
+                  disabled && "opacity-50",
+                )}
+              >
+                <span className="font-marker text-[24px] leading-none">
+                  {cm}cm
+                </span>
+              </button>
+            ))}
+          </div>
+          <p className="font-hand mt-3 text-[12px] leading-[1.6] text-muted-foreground">
+            手首まわりに少しゆとりを足した長さがおすすめです。迷ったら 17cm。
+          </p>
+        </div>
+      )}
+
+      {category === "necklace" && (
       <div>
         <div className="flex items-baseline justify-between gap-3">
           <p
@@ -142,6 +194,7 @@ export function ProductBuy({
           すべてアジャスター付き。±2cm 程度の調整ができます。
         </p>
       </div>
+      )}
 
       <div className="mt-6">
         {disabled ? (
@@ -155,11 +208,16 @@ export function ProductBuy({
             disabled={adding}
             className="w-full"
           >
-            {adding ? "Added —" : `カートに入れる ・ ${effectiveSize}cm`}
+            {adding
+              ? "Added —"
+              : effectiveLabel
+                ? `カートに入れる ・ ${effectiveLabel}`
+                : "カートに入れる"}
           </Button>
         )}
       </div>
 
+      {category !== "glasses-chain" && (
       <div className="mt-8 border-t border-border pt-6">
         <p
           className="font-marker text-[20px] leading-none md:text-[22px]"
@@ -168,8 +226,12 @@ export function ProductBuy({
           どの長さがいいか迷ったら
         </p>
         <p className="font-hand mt-3 text-[15px] leading-[1.85] text-foreground/85">
-          好きな長さは上の「カスタム」から 1cm 単位で指定できます。
-          <br />
+          {category === "necklace" && (
+            <>
+              好きな長さは上の「カスタム」から 1cm 単位で指定できます。
+              <br />
+            </>
+          )}
           測り方がわからない・相談したい方はお気軽に DM へどうぞ。
         </p>
         <a
@@ -182,6 +244,7 @@ export function ProductBuy({
           Instagram DM で相談する →
         </a>
       </div>
+      )}
     </div>
   );
 }

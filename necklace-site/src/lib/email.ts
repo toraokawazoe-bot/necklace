@@ -292,3 +292,43 @@ export async function sendOrderNotificationToOwner(
     console.error("[email] owner notification failed:", e);
   }
 }
+
+export type OversoldItem = {
+  productName: string;
+  remaining: number;
+};
+
+// 在庫を超えて売れてしまった(同時購入で売り越し)時にオーナーへ知らせる。
+export async function sendOversellNotificationToOwner(
+  sessionId: string,
+  items: OversoldItem[],
+): Promise<void> {
+  const resend = getResend();
+  if (!resend || !OWNER_EMAIL) {
+    console.warn(
+      "[email] RESEND_API_KEY or SHOP_OWNER_EMAIL not set — skipping oversell notice",
+    );
+    return;
+  }
+
+  const text = [
+    `在庫数を超えて注文が入りました(売り越し)。`,
+    `対応(お客様へのご連絡・返金・追加制作)をご検討ください。`,
+    ``,
+    ...items.map((i) => `・${i.productName}　残数 ${i.remaining}（マイナス=足りない個数）`),
+    ``,
+    `Stripe Session: ${sessionId}`,
+    `https://dashboard.stripe.com/payments/${sessionId}`,
+  ].join("\n");
+
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: [OWNER_EMAIL],
+      subject: "【740NLL システム】在庫の売り越しが発生しました",
+      text,
+    });
+  } catch (e) {
+    console.error("[email] oversell notice failed:", e);
+  }
+}

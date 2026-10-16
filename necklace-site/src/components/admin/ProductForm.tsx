@@ -5,8 +5,16 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { Product } from "@/lib/products";
 import { compressImage } from "@/lib/compress-image";
+import {
+  CATEGORY_OPTIONS,
+  resolveCategory,
+  type ProductCategory,
+} from "@/lib/product-category";
 
 type FormValues = {
+  category: ProductCategory;
+  // 空欄=在庫数を管理しない(無制限)
+  stock: string;
   slug: string;
   name: string;
   subtitle: string;
@@ -26,6 +34,8 @@ type FormValues = {
 const DEFAULT_BG = "#efe4cd";
 
 const DEFAULTS: FormValues = {
+  category: "necklace",
+  stock: "",
   slug: "",
   name: "",
   subtitle: "",
@@ -52,6 +62,8 @@ export function ProductForm({ product }: { product?: Product }) {
   const [values, setValues] = useState<FormValues>(
     product
       ? {
+          category: resolveCategory(product.category),
+          stock: product.stock == null ? "" : String(product.stock),
           slug: product.slug,
           name: product.name,
           subtitle: product.subtitle,
@@ -149,6 +161,7 @@ export function ProductForm({ product }: { product?: Product }) {
     try {
       const payload = {
         ...values,
+        stock: values.stock.trim() === "" ? null : Number(values.stock),
         details: values.details
           .split("\n")
           .map((d) => d.trim())
@@ -313,6 +326,36 @@ export function ProductForm({ product }: { product?: Product }) {
       </section>
 
       <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="カテゴリ (購入時の長さ選択が変わります)">
+          <select
+            value={values.category}
+            onChange={(e) => set("category", resolveCategory(e.target.value))}
+            className={inputCls}
+          >
+            {CATEGORY_OPTIONS.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-muted-foreground">
+            ネックレス=38/41cm・カスタム、ブレスレット=16〜19cm、メガネチェーン=長さ選択なし
+          </p>
+        </Field>
+        <Field label="在庫数 (空欄=無制限)">
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={values.stock}
+            onChange={(e) => set("stock", e.target.value)}
+            placeholder="空欄=在庫を管理しない"
+            className={inputCls}
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            数を入れると購入のたびに減り、0で売り切れになります。
+          </p>
+        </Field>
         <Field label="商品名 (日本語)">
           <input
             type="text"

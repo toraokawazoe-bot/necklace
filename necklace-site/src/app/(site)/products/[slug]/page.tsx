@@ -165,7 +165,11 @@ export default async function ProductPage({ params }: { params: Params }) {
           </ul>
 
           <div className="mt-12">
-            <ProductBuy productId={product.id} disabled={!product.inStock} />
+            <ProductBuy
+              productId={product.id}
+              category={product.category}
+              disabled={!product.inStock}
+            />
             <p className="font-hand mt-4 text-[14px] text-muted-foreground">
               送料 全国一律 ¥150
             </p>

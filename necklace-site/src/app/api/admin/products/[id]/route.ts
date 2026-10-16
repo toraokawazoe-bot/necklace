@@ -6,6 +6,7 @@ import {
   updateProduct,
 } from "@/lib/product-store";
 import type { Product } from "@/lib/products";
+import { parseStock, resolveCategory } from "@/lib/product-category";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,8 +48,24 @@ export async function PATCH(req: Request, { params }: { params: Params }) {
       { status: 400 },
     );
   }
+  const patch: Partial<Product> = { ...body };
+  if (body.category !== undefined) {
+    if (resolveCategory(body.category) !== body.category) {
+      return NextResponse.json({ error: "カテゴリが正しくありません" }, { status: 400 });
+    }
+  }
+  if ("stock" in body) {
+    const stock = parseStock(body.stock);
+    if (stock === "invalid") {
+      return NextResponse.json(
+        { error: "在庫数は0以上の整数で入力してください（空欄=無制限）" },
+        { status: 400 },
+      );
+    }
+    patch.stock = stock;
+  }
   try {
-    const product = await updateProduct(id, body);
+    const product = await updateProduct(id, patch);
     return NextResponse.json({ product });
   } catch (e) {
     const message = e instanceof Error ? e.message : "update failed";

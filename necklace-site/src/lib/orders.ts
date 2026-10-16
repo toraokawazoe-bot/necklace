@@ -91,35 +91,65 @@ export function carrierLabel(carrier: Carrier | undefined): string {
   }
 }
 
-export async function recordOrder(order: StoredOrder): Promise<void> {
+// 注文を session.id × status 単位で冪等に記録する。
+// 戻り値: true=新規に記録した / false=既に記録済み(再送・重複イベント)。
+// Redis の失敗は握りつぶさず呼び出し元へ投げる(Webhook が 500 を返して Stripe に再送させるため)。
+// 「記録済みの印」と一覧・集計の更新は1つの Lua スクリプトで行い、片方だけ成功する状態を作らない。
+export async function recordOrder(order: StoredOrder): Promise<boolean> {
   const redis = getRedis();
   if (!redis) {
     console.warn("[orders] redis not configured — skipping record");
-    return;
+    return true;
   }
-  try {
-    const json = JSON.stringify(order);
-    await redis.lpush(RECENT_KEY, json);
-    await redis.ltrim(RECENT_KEY, 0, RECENT_LIMIT - 1);
+  const day = new Date(order.createdAt).toISOString().slice(0, 10);
+  const isPaid = order.status === "paid";
+  const script = `
+if redis.call('EXISTS', KEYS[1]) == 1 then return 0 end
+redis.call('SET', KEYS[1], '1')
+redis.call('LPUSH', KEYS[2], ARGV[1])
+redis.call('LTRIM', KEYS[2], 0, tonumber(ARGV[2]) - 1)
+redis.call('INCR', KEYS[3])
+if ARGV[3] == '1' then
+  redis.call('INCRBY', KEYS[4], tonumber(ARGV[4]))
+  redis.call('INCR', KEYS[5])
+  redis.call('INCRBY', KEYS[6], tonumber(ARGV[4]))
+end
+return 1`;
+  const created = await redis.eval(
+    script,
+    [
+      `${NS}:recorded:${order.sessionId}:${order.status}`,
+      RECENT_KEY,
+      isPaid ? `${NS}:count:paid:total` : `${NS}:count:${order.status}:total`,
+      `${NS}:revenue:total`,
+      `${NS}:count:paid:day:${day}`,
+      `${NS}:revenue:day:${day}`,
+    ],
+    [
+      JSON.stringify(order),
+      String(RECENT_LIMIT),
+      isPaid ? "1" : "0",
+      String(order.amountTotal),
+    ],
+  );
+  return Number(created) === 1;
+}
 
-    if (order.status === "paid") {
-      await Promise.all([
-        redis.incr(`${NS}:count:paid:total`),
-        redis.incrby(`${NS}:revenue:total`, order.amountTotal),
-        redis.incr(
-          `${NS}:count:paid:day:${new Date(order.createdAt).toISOString().slice(0, 10)}`,
-        ),
-        redis.incrby(
-          `${NS}:revenue:day:${new Date(order.createdAt).toISOString().slice(0, 10)}`,
-          order.amountTotal,
-        ),
-      ]);
-    } else {
-      await redis.incr(`${NS}:count:${order.status}:total`);
-    }
-  } catch (e) {
-    console.error("[orders] recordOrder failed:", e);
+// 全額返金(charge.refunded)で該当注文を refunded にする。見つかって更新したら true。
+export async function markOrderRefunded(sessionId: string): Promise<boolean> {
+  const redis = getRedis();
+  if (!redis) return false;
+  const raw = await redis.lrange(RECENT_KEY, 0, -1);
+  for (let i = 0; i < raw.length; i++) {
+    const order = parseOrder(raw[i]);
+    if (!order || order.sessionId !== sessionId) continue;
+    if (order.status === "refunded") return false;
+    if (order.status !== "paid") continue;
+    await redis.lset(RECENT_KEY, i, JSON.stringify({ ...order, status: "refunded" }));
+    await redis.incr(`${NS}:count:refunded:total`);
+    return true;
   }
+  return false;
 }
 
 export type OrderStats = {

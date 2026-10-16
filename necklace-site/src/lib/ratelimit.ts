@@ -29,8 +29,9 @@ function makeLimiter(prefix: string, tokens: number, window: string): Ratelimit 
   return lim;
 }
 
+// 同一IP 10分30回。イベント会場の共有Wi-Fiなど、1つのIPから複数人が買う場面を想定
 export const checkoutLimiter = () =>
-  makeLimiter("checkout", 10, "10 m");
+  makeLimiter("checkout", 30, "10 m");
 export const adminAuthLimiter = () =>
   makeLimiter("admin-auth", 20, "10 m");
 export const uploadLimiter = () =>

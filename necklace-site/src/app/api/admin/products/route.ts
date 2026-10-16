@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-session";
+import { parseStock, resolveCategory } from "@/lib/product-category";
 import {
   createProduct,
   listProducts,
@@ -48,6 +49,10 @@ function validate(body: CreateBody): { ok: true; input: ProductInput } | { ok: f
       error: "スラッグは小文字英数字とハイフンのみ使えます",
     };
   }
+  const stock = parseStock(body.stock);
+  if (stock === "invalid") {
+    return { ok: false, error: "在庫数は0以上の整数で入力してください（空欄=無制限）" };
+  }
   const input: ProductInput = {
     id: body.id ?? "",
     slug: String(body.slug),
@@ -56,7 +61,7 @@ function validate(body: CreateBody): { ok: true; input: ProductInput } | { ok: f
     description: String(body.description),
     price: Number(body.price),
     currency: "JPY",
-    category: "necklace",
+    category: resolveCategory(body.category),
     material: String(body.material),
     length: String(body.length),
     image: String(body.image),
@@ -64,6 +69,7 @@ function validate(body: CreateBody): { ok: true; input: ProductInput } | { ok: f
     imageBg: String(body.imageBg),
     details: Array.isArray(body.details) ? body.details.map(String) : [],
     gallery: Array.isArray(body.gallery) ? body.gallery.map(String) : [],
+    stock,
     inStock: body.inStock !== false,
     published: body.published !== false,
     sortOrder: body.sortOrder,

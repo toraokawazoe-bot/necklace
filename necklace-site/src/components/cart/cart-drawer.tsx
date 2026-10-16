@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { X, Plus, Minus } from "lucide-react";
@@ -8,12 +8,14 @@ import { useCart } from "@/lib/cart-store";
 import type { Product } from "@/lib/products";
 import { Button } from "@/components/ui/button";
 import { formatJPY } from "@/lib/utils";
+import { isValidSize, resolveCategory, sizeLabel } from "@/lib/product-category";
 
 export function CartDrawer() {
   const { lines, isOpen, close, setQty, remove, hydrated } = useCart();
   const [mounted, setMounted] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
-  const [isPending, startTransition] = useTransition();
+  // 決済ページへ移動中。Stripe から戻る(bfcache 復元)時は pageshow で解除する。
+  const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,6 +26,15 @@ export function CartDrawer() {
         if (Array.isArray(data.products)) setProducts(data.products);
       })
       .catch((e) => console.error("[cart] product fetch failed:", e));
+  }, []);
+
+  useEffect(() => {
+    // iOS Safari は戻るボタンで bfcache から復元され、「Redirecting…」の状態のまま固まることがある
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) setIsPending(false);
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
   }, []);
 
   useEffect(() => {
@@ -51,6 +62,11 @@ export function CartDrawer() {
       (x): x is { line: typeof lines[number]; product: Product } => x !== null,
     );
 
+  // 商品カテゴリと長さの組み合わせが合わない行(例: ブレスレットに 38cm が残っている)
+  const isLineInvalid = ({ line, product }: (typeof cartItems)[number]) =>
+    !isValidSize(resolveCategory(product.category), line.size);
+  const hasInvalid = cartItems.some(isLineInvalid);
+
   const subtotal = cartItems.reduce(
     (sum, { line, product }) => sum + line.qty * product.price,
     0,
@@ -62,7 +78,12 @@ export function CartDrawer() {
       setError("カートが空です。商品を追加してから再度お試しください。");
       return;
     }
-    startTransition(async () => {
+    if (hasInvalid) {
+      setError("長さの合わない商品があります。商品ページで長さを選び直してください。");
+      return;
+    }
+    setIsPending(true);
+    void (async () => {
       try {
         const res = await fetch("/api/checkout", {
           method: "POST",
@@ -92,8 +113,9 @@ export function CartDrawer() {
       } catch (e) {
         console.error("[checkout]", e);
         setError(e instanceof Error ? e.message : "想定外のエラーが発生しました");
+        setIsPending(false);
       }
-    });
+    })();
   };
 
   return (
@@ -168,12 +190,26 @@ export function CartDrawer() {
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {product.subtitle}
                       </p>
-                      <p
-                        className="font-marker mt-1 text-[16px] leading-none"
-                        style={{ color: "var(--bead-olive)" }}
-                      >
-                        {line.size}cm
-                      </p>
+                      {isLineInvalid({ line, product }) ? (
+                        <p className="mt-1 text-xs text-red-700" role="alert">
+                          長さを選び直してください（
+                          <Link
+                            href={`/products/${product.slug}`}
+                            onClick={close}
+                            className="underline"
+                          >
+                            商品ページへ
+                          </Link>
+                          ）
+                        </p>
+                      ) : sizeLabel(resolveCategory(product.category), line.size) ? (
+                        <p
+                          className="font-marker mt-1 text-[16px] leading-none"
+                          style={{ color: "var(--bead-olive)" }}
+                        >
+                          {line.size}cm
+                        </p>
+                      ) : null}
                       <p className="mt-2 text-sm">
                         {formatJPY(product.price)}
                       </p>
@@ -236,7 +272,7 @@ export function CartDrawer() {
               className="mt-4 w-full"
               size="lg"
               onClick={handleCheckout}
-              disabled={isPending}
+              disabled={isPending || hasInvalid}
             >
               {isPending ? "Redirecting…" : "Checkout"}
             </Button>

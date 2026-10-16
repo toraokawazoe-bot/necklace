@@ -44,3 +44,6 @@ next-env.d.ts
 
 # separate repository
 /uniform_EC/
+
+# 本番データのバックアップ(scripts/*.mjs が出力)
+/scripts/backups/
