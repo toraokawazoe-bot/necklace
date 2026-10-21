@@ -41,6 +41,12 @@ export default async function AdminDashboard() {
           >
             商品管理
           </Link>
+          <Link
+            href="/admin/coupons"
+            className="rounded-full border border-border px-4 py-1.5 text-sm transition hover:bg-foreground hover:text-background"
+          >
+            クーポン
+          </Link>
           <span className="min-w-0 max-w-full truncate text-muted-foreground">
             {session.email}
           </span>
@@ -285,6 +291,7 @@ function OrdersTable({ orders }: { orders: StoredOrder[] }) {
                 {o.amountTotal > 0 ? formatJPY(o.amountTotal) : "—"}
               </span>
             </div>
+            <CouponNote order={o} />
 
             {(o.shippingSummary || o.paymentMethod) && (
               <dl className="mt-3 space-y-1 border-t border-border pt-3 text-xs">
@@ -359,6 +366,7 @@ function OrdersTable({ orders }: { orders: StoredOrder[] }) {
               </td>
               <td className="px-4 py-3 align-top text-right font-medium tabular-nums">
                 {o.amountTotal > 0 ? formatJPY(o.amountTotal) : "—"}
+                <CouponNote order={o} />
               </td>
               <td className="px-4 py-3 align-top text-xs">
                 {o.shippingSummary ?? <span className="text-muted-foreground">—</span>}
@@ -386,6 +394,16 @@ function OrdersTable({ orders }: { orders: StoredOrder[] }) {
       </table>
       </div>
     </>
+  );
+}
+
+function CouponNote({ order }: { order: StoredOrder }) {
+  if (!order.discountAmount) return null;
+  return (
+    <div className="mt-1 text-xs font-normal text-muted-foreground">
+      クーポン{order.couponCode ? ` ${order.couponCode}` : ""} −
+      {formatJPY(order.discountAmount)}
+    </div>
   );
 }
 

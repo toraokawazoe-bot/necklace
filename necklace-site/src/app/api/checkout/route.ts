@@ -162,6 +162,9 @@ export async function POST(req: Request) {
         },
       },
     ],
+    // 決済画面でクーポン(Promotion Code)を入力できるようにする。
+    // 割引は商品代(line_items)だけにかかり、上の shipping_options の送料 150 円は割引されない。
+    allow_promotion_codes: true,
     locale: "ja",
     success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/checkout/cancel`,

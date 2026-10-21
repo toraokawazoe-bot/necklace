@@ -13,6 +13,7 @@ import {
   type OrderEmailData,
   type OrderItem,
 } from "@/lib/email";
+import { resolveSessionDiscount } from "@/lib/coupons";
 import { markOrderRefunded, recordOrder, type StoredOrder } from "@/lib/orders";
 
 export const runtime = "nodejs";
@@ -111,8 +112,12 @@ async function handlePaid(session: Stripe.Checkout.Session) {
   const items: OrderItem[] = lineItemsResp.data.map((li) => ({
     name: li.description ?? "(無題)",
     qty: li.quantity ?? 1,
-    amountTotal: li.amount_total ?? 0,
+    // 割引前の商品代。クーポン・送料は別行(下の discount / shippingAmount)で扱い、
+    // 「商品代 − クーポン + 送料 = 支払い合計」になるようにする。
+    amountTotal: li.amount_subtotal ?? li.amount_total ?? 0,
   }));
+  const discount = await resolveSessionDiscount(session);
+  const shippingAmount = session.total_details?.amount_shipping ?? 0;
 
   const customerEmail =
     session.customer_details?.email ?? session.customer_email ?? "";
@@ -140,6 +145,9 @@ async function handlePaid(session: Stripe.Checkout.Session) {
     customerName,
     shipping,
     paymentMethodSummary: paymentMethod,
+    shippingAmount,
+    couponCode: discount?.code ?? null,
+    discountAmount: discount?.amount ?? 0,
   };
 
   const shippingSummary = (() => {
@@ -164,6 +172,12 @@ async function handlePaid(session: Stripe.Checkout.Session) {
     items,
     paymentMethod,
     shippingSummary,
+    ...(discount
+      ? {
+          discountAmount: discount.amount,
+          ...(discount.code ? { couponCode: discount.code } : {}),
+        }
+      : {}),
   };
 
   // 各ステップは注文(session.id)単位で冪等。途中で失敗して Stripe が再送しても、

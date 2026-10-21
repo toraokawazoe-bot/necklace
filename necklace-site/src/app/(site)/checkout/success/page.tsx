@@ -16,12 +16,14 @@ export default async function SuccessPage({
 
   let customerEmail: string | null = null;
   let amountTotal: number | null = null;
+  let discount = 0;
   if (session_id && process.env.STRIPE_SECRET_KEY) {
     try {
       const stripe = getStripe();
       const session = await stripe.checkout.sessions.retrieve(session_id);
       customerEmail = session.customer_details?.email ?? null;
       amountTotal = session.amount_total ?? null;
+      discount = session.total_details?.amount_discount ?? 0;
     } catch {
       // surface a generic confirmation even if retrieval fails
     }
@@ -42,6 +44,7 @@ export default async function SuccessPage({
       </p>
       {amountTotal !== null && (
         <p className="mt-4 text-[13px] tabular-nums text-muted-foreground">
+          {discount > 0 ? `クーポン −¥${discount.toLocaleString("ja-JP")} ・ ` : ""}
           合計 ¥{amountTotal.toLocaleString("ja-JP")}
         </p>
       )}

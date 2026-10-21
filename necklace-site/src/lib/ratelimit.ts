@@ -34,6 +34,9 @@ export const checkoutLimiter = () =>
   makeLimiter("checkout", 30, "10 m");
 export const adminAuthLimiter = () =>
   makeLimiter("admin-auth", 20, "10 m");
+// クーポン発行: 管理者 1 人あたり 10 分 20 回(連打・誤操作での大量発行を防ぐ)
+export const couponLimiter = () =>
+  makeLimiter("coupon-issue", 20, "10 m");
 export const uploadLimiter = () =>
   makeLimiter("upload", 30, "10 m");
 

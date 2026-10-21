@@ -36,7 +36,24 @@ export type OrderEmailData = {
     country?: string | null;
   } | null;
   paymentMethodSummary?: string;
+  // 送料・クーポン(あれば)。items は割引前の商品代、amountTotal は割引後・送料込みの支払い合計。
+  shippingAmount?: number;
+  couponCode?: string | null;
+  discountAmount?: number;
 };
+
+function formatPricePlain(data: OrderEmailData): string {
+  const lines: string[] = [];
+  if (data.discountAmount && data.discountAmount > 0) {
+    lines.push(
+      `クーポン${data.couponCode ? `（${data.couponCode}）` : ""}　−${formatJPY(data.discountAmount)}`,
+    );
+  }
+  if (data.shippingAmount != null) {
+    lines.push(`送料　${formatJPY(data.shippingAmount)}`);
+  }
+  return lines.join("\n");
+}
 
 function formatItemsPlain(items: OrderItem[]): string {
   return items
@@ -77,6 +94,7 @@ export async function sendOrderConfirmationToCustomer(
     ``,
     `── ご注文内容 ──`,
     formatItemsPlain(data.items),
+    ...(formatPricePlain(data) ? [formatPricePlain(data)] : []),
     ``,
     `お支払い合計　${formatJPY(data.amountTotal)}`,
     `お届け先　${formatShippingPlain(data.shipping)}`,
@@ -267,6 +285,7 @@ export async function sendOrderNotificationToOwner(
     ``,
     `── 注文内容 ──`,
     formatItemsPlain(data.items),
+    ...(formatPricePlain(data) ? [formatPricePlain(data)] : []),
     ``,
     `合計　${formatJPY(data.amountTotal)}`,
     `決済方法　${data.paymentMethodSummary ?? "（未取得）"}`,

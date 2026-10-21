@@ -44,6 +44,9 @@ export type StoredOrder = {
   items: StoredOrderItem[];
   paymentMethod: string | null;
   shippingSummary: string | null;
+  // クーポン利用時のみ。割引額は円(正の数)、couponCode は使われたコード(取れなければ無し)。
+  couponCode?: string;
+  discountAmount?: number;
   shippedAt?: number;
   carrier?: Carrier;
   trackingNumber?: string;
