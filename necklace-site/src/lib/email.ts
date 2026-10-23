@@ -161,7 +161,7 @@ export async function sendPaymentIssueToCustomer(
 
   const reasonText =
     reason === "expired"
-      ? "お支払い期限内にご入金が確認できませんでした"
+      ? "決済ページの有効期限内にお支払いが完了しませんでした"
       : "お支払いが正常に完了しませんでした";
 
   const text = [
@@ -183,7 +183,7 @@ export async function sendPaymentIssueToCustomer(
       to: [email],
       subject:
         reason === "expired"
-          ? "【740NLL】お支払い期限切れのお知らせ"
+          ? "【740NLL】お支払い手続き期限切れのお知らせ"
           : "【740NLL】お支払い未完了のお知らせ",
       text,
       ...(REPLY_TO ? { replyTo: REPLY_TO } : {}),

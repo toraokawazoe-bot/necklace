@@ -36,8 +36,6 @@ const ROWS: { label: string; value: React.ReactNode }[] = [
     value: (
       <>
         送料：全国一律 ¥150
-        <br />
-        コンビニ払い／銀行振込をご選択の場合、決済手数料は当方が負担いたします。
       </>
     ),
   },
@@ -47,23 +45,15 @@ const ROWS: { label: string; value: React.ReactNode }[] = [
       <>
         クレジットカード（Visa／Mastercard／American Express／JCB／Diners／Discover）
         <br />
-        コンビニ払い（セブン-イレブン／ローソン／ファミリーマート／ミニストップ）
+        PayPay
         <br />
-        銀行振込（Stripe 経由の仮想口座への振込）
+        ※PayPay が一時的にご利用いただけない場合は、クレジットカードのみのお支払いとなります。
       </>
     ),
   },
   {
     label: "支払時期",
-    value: (
-      <>
-        クレジットカード：ご注文時に決済が確定します。
-        <br />
-        コンビニ払い：ご注文後 3 日以内にお支払いください。
-        <br />
-        銀行振込：ご注文後 3 日以内にお振込みください。
-      </>
-    ),
+    value: "クレジットカード・PayPay ともに、ご注文時に決済が確定します。",
   },
   {
     label: "商品の引渡時期",
@@ -127,7 +117,7 @@ export default function TokushohoPage() {
       </dl>
 
       <p className="font-hand mt-10 text-[13px] leading-[1.85] text-muted-foreground">
-        最終更新日：2026 年 5 月 9 日
+        最終更新日：2026 年 10 月 23 日
       </p>
     </article>
   );

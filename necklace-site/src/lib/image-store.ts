@@ -1,4 +1,5 @@
 import { Redis } from "@upstash/redis";
+import { stripImageMetadata } from "@/lib/image-sanitize";
 
 // 商品画像の保存先。Vercel Blob はチーム共有の無料枠を他案件に使い切られて止まったので
 // （2026-10-14）、商品データと同じ Upstash Redis に置き、/api/images/<id> で配信する。
@@ -28,7 +29,12 @@ export async function saveImage(file: File): Promise<string> {
   if (!redis) throw new Error("Redis not configured");
   const ext = file.type.split("/")[1];
   const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
-  const data = Buffer.from(await file.arrayBuffer()).toString("base64");
+  // 位置情報などのメタデータを外してから保存する(失敗したら保存しない)
+  const clean = await stripImageMetadata(
+    Buffer.from(await file.arrayBuffer()),
+    file.type,
+  );
+  const data = clean.toString("base64");
   const value: StoredImage = { type: file.type, data };
   await redis.set(key(id), JSON.stringify(value));
   return `/api/images/${id}`;
