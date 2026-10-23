@@ -14,11 +14,6 @@ export function SizeGuide({
   variant?: "link" | "banner";
 }) {
   const [open, setOpen] = useState(false);
-  const [neck, setNeck] = useState(33);
-
-  const just = neck + 6;
-  const loose = [neck + 8, neck + 10];
-
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -112,210 +107,7 @@ export function SizeGuide({
           </button>
         </div>
 
-        {/* 基準ルール */}
-        <section
-          className="mt-5 rounded-xl px-4 py-4"
-          style={{ background: "rgba(239,217,176,0.35)" }}
-        >
-          <p
-            className="font-marker text-[17px] leading-none"
-            style={{ color: "var(--bead-rust)" }}
-          >
-            基準はひとつだけ
-          </p>
-          <p className="font-hand mt-2 text-[15px] leading-[1.8] text-foreground/85">
-            ジャストサイズ＝<strong>首回り ＋6cm</strong>。
-            ゆったり着けたい方は <strong>＋8〜10cm</strong> が目安です。
-            <span className="mt-1 block text-[13.5px] text-muted-foreground">
-              例：首回り30cmなら → ジャスト36cm／ゆったり38〜40cm
-            </span>
-          </p>
-        </section>
-
-        {/* 図解 */}
-        <div className="mt-6">
-          <NeckIllustration />
-        </div>
-
-        {/* 測り方 */}
-        <section className="mt-7">
-          <p
-            className="font-marker text-[17px] leading-none"
-            style={{ color: "var(--bead-blue)" }}
-          >
-            メジャーがなくても測れます
-          </p>
-          <ol className="font-hand mt-3 space-y-2 text-[15px] leading-[1.8] text-foreground/85">
-            <li className="flex gap-2">
-              <span style={{ color: "var(--bead-brown)" }}>1.</span>
-              <span>
-                測る場所は<strong>首の真ん中（喉仏の下あたり）</strong>。
-                ここをぐるっと一周した長さが「首回り」です
-              </span>
-            </li>
-            <li className="flex gap-2">
-              <span style={{ color: "var(--bead-brown)" }}>2.</span>
-              <span>
-                メジャーがあれば、首の真ん中にゆるくひと巻きして測ります
-              </span>
-            </li>
-            <li className="flex gap-2">
-              <span style={{ color: "var(--bead-brown)" }}>3.</span>
-              <span>
-                なければ紐や充電ケーブルをひと巻きして、
-                重なったところを指でつまみ、定規にあてて長さを測ります
-              </span>
-            </li>
-            <li className="flex gap-2">
-              <span style={{ color: "var(--bead-brown)" }}>4.</span>
-              <span>
-                首回りに <strong>＋6cm でジャストサイズ</strong>、
-                <strong>＋8〜10cm でゆったり鎖骨ライン</strong>が目安です
-              </span>
-            </li>
-          </ol>
-        </section>
-
-        {/* シミュレーター */}
-        <section className="mt-7">
-          <p
-            className="font-marker text-[17px] leading-none"
-            style={{ color: "var(--bead-blue)" }}
-          >
-            あなたのサイズを出してみる
-          </p>
-          <div className="mt-3 rounded-xl border border-border px-4 py-4">
-            <p className="font-hand text-[13px] text-muted-foreground">
-              首回り
-            </p>
-            <div className="mt-1.5 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setNeck((n) => Math.max(NECK_MIN, n - 1))}
-                disabled={neck <= NECK_MIN}
-                aria-label="首回りを1cm減らす"
-                className="font-hand flex h-9 w-9 items-center justify-center rounded-full border border-border text-[18px] leading-none transition-colors hover:border-foreground/50 disabled:opacity-30"
-              >
-                −
-              </button>
-              <p className="font-marker min-w-[88px] text-center text-[26px] leading-none">
-                {neck}
-                <span className="font-hand ml-0.5 text-[14px] text-muted-foreground">
-                  cm
-                </span>
-              </p>
-              <button
-                type="button"
-                onClick={() => setNeck((n) => Math.min(NECK_MAX, n + 1))}
-                disabled={neck >= NECK_MAX}
-                aria-label="首回りを1cm増やす"
-                className="font-hand flex h-9 w-9 items-center justify-center rounded-full border border-border text-[18px] leading-none transition-colors hover:border-foreground/50 disabled:opacity-30"
-              >
-                ＋
-              </button>
-              <div className="ml-auto flex gap-1.5">
-                {NECK_PRESETS.map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => setNeck(p)}
-                    className={`font-hand rounded-full border px-2.5 py-1 text-[12px] leading-none transition-colors ${
-                      neck === p
-                        ? "border-foreground/60 text-foreground"
-                        : "border-border text-muted-foreground hover:border-foreground/40"
-                    }`}
-                  >
-                    {p}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div
-              aria-live="polite"
-              className="mt-4 grid grid-cols-2 gap-2.5"
-            >
-              <div
-                className="rounded-lg px-3 py-3"
-                style={{ background: "rgba(239,217,176,0.35)" }}
-              >
-                <p
-                  className="font-hand text-[12px]"
-                  style={{ color: "var(--bead-blue)" }}
-                >
-                  ジャストサイズ（＋6cm）
-                </p>
-                <p className="font-marker mt-1 text-[24px] leading-none">
-                  {just}cm
-                </p>
-              </div>
-              <div
-                className="rounded-lg px-3 py-3"
-                style={{ background: "rgba(239,217,176,0.35)" }}
-              >
-                <p
-                  className="font-hand text-[12px]"
-                  style={{ color: "var(--bead-rust)" }}
-                >
-                  ゆったり（＋8〜10cm）
-                </p>
-                <p className="font-marker mt-1 text-[24px] leading-none">
-                  {loose[0]}〜{loose[1]}cm
-                </p>
-              </div>
-            </div>
-            <p className="font-hand mt-3 text-[13px] leading-[1.7] text-muted-foreground">
-              {just === 38 || just === 41
-                ? `既製サイズの ${just}cm がそのままジャストです。`
-                : `サイズ選択の「カスタム」から ${just}cm を1cm単位・同価格で指定できます。`}
-            </p>
-          </div>
-        </section>
-
-        {/* 早見表 */}
-        <section className="mt-7">
-          <p
-            className="font-marker text-[17px] leading-none"
-            style={{ color: "var(--bead-blue)" }}
-          >
-            首回り早見表
-          </p>
-          <table className="font-hand mt-3 w-full text-left text-[15px]">
-            <thead>
-              <tr className="border-b border-border text-[13px] text-muted-foreground">
-                <th className="py-2 font-normal">首回り</th>
-                <th className="py-2 font-normal">ジャスト（＋6cm）</th>
-                <th className="py-2 font-normal">ゆったり（＋8〜10cm）</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              <tr>
-                <td className="py-2.5">30cm（細め）</td>
-                <td className="py-2.5 font-semibold">36cm</td>
-                <td className="py-2.5">38〜40cm</td>
-              </tr>
-              <tr>
-                <td className="py-2.5">32cm</td>
-                <td className="py-2.5 font-semibold">38cm</td>
-                <td className="py-2.5">40〜42cm</td>
-              </tr>
-              <tr>
-                <td className="py-2.5">35cm</td>
-                <td className="py-2.5 font-semibold">41cm</td>
-                <td className="py-2.5">43〜45cm</td>
-              </tr>
-              <tr>
-                <td className="py-2.5">39cm（しっかりめ）</td>
-                <td className="py-2.5 font-semibold">45cm</td>
-                <td className="py-2.5">47〜49cm</td>
-              </tr>
-            </tbody>
-          </table>
-          <p className="font-hand mt-2 text-[13px] leading-[1.7] text-muted-foreground">
-            首回り32cm前後なら既製の38cm、35cm前後なら41cmがジャスト。
-            男性の方など首回りがしっかりめの方は、45cm前後をカスタムで指定するのがおすすめです。
-          </p>
-        </section>
+        <SizeGuideContent />
 
         {/* 迷ったら */}
         <section
@@ -336,6 +128,223 @@ export function SizeGuide({
           </p>
         </section>
       </div>
+    </>
+  );
+}
+
+/** ネックレスの長さの中身(基準・図解・測り方・計算・早見表)。モーダルと /guide/length で共用 */
+export function SizeGuideContent() {
+  const [neck, setNeck] = useState(33);
+
+  const just = neck + 6;
+  const loose = [neck + 8, neck + 10];
+
+  return (
+    <>
+    {/* 基準ルール */}
+    <section
+      className="mt-5 rounded-xl px-4 py-4"
+      style={{ background: "rgba(239,217,176,0.35)" }}
+    >
+      <p
+        className="font-marker text-[17px] leading-none"
+        style={{ color: "var(--bead-rust)" }}
+      >
+        基準はひとつだけ
+      </p>
+      <p className="font-hand mt-2 text-[15px] leading-[1.8] text-foreground/85">
+        ジャストサイズ＝<strong>首回り ＋6cm</strong>。
+        ゆったり着けたい方は <strong>＋8〜10cm</strong> が目安です。
+        <span className="mt-1 block text-[13.5px] text-muted-foreground">
+          例：首回り30cmなら → ジャスト36cm／ゆったり38〜40cm
+        </span>
+      </p>
+    </section>
+
+    {/* 図解 */}
+    <div className="mt-6">
+      <NeckIllustration />
+    </div>
+
+    {/* 測り方 */}
+    <section className="mt-7">
+      <p
+        className="font-marker text-[17px] leading-none"
+        style={{ color: "var(--bead-blue)" }}
+      >
+        メジャーがなくても測れます
+      </p>
+      <ol className="font-hand mt-3 space-y-2 text-[15px] leading-[1.8] text-foreground/85">
+        <li className="flex gap-2">
+          <span style={{ color: "var(--bead-brown)" }}>1.</span>
+          <span>
+            測る場所は<strong>首の真ん中（喉仏の下あたり）</strong>。
+            ここをぐるっと一周した長さが「首回り」です
+          </span>
+        </li>
+        <li className="flex gap-2">
+          <span style={{ color: "var(--bead-brown)" }}>2.</span>
+          <span>
+            メジャーがあれば、首の真ん中にゆるくひと巻きして測ります
+          </span>
+        </li>
+        <li className="flex gap-2">
+          <span style={{ color: "var(--bead-brown)" }}>3.</span>
+          <span>
+            なければ紐や充電ケーブルをひと巻きして、
+            重なったところを指でつまみ、定規にあてて長さを測ります
+          </span>
+        </li>
+        <li className="flex gap-2">
+          <span style={{ color: "var(--bead-brown)" }}>4.</span>
+          <span>
+            首回りに <strong>＋6cm でジャストサイズ</strong>、
+            <strong>＋8〜10cm でゆったり鎖骨ライン</strong>が目安です
+          </span>
+        </li>
+      </ol>
+    </section>
+
+    {/* シミュレーター */}
+    <section className="mt-7">
+      <p
+        className="font-marker text-[17px] leading-none"
+        style={{ color: "var(--bead-blue)" }}
+      >
+        あなたのサイズを出してみる
+      </p>
+      <div className="mt-3 rounded-xl border border-border px-4 py-4">
+        <p className="font-hand text-[13px] text-muted-foreground">
+          首回り
+        </p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setNeck((n) => Math.max(NECK_MIN, n - 1))}
+            disabled={neck <= NECK_MIN}
+            aria-label="首回りを1cm減らす"
+            className="font-hand flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-[18px] leading-none transition-colors hover:border-foreground/50 disabled:opacity-30"
+          >
+            −
+          </button>
+          <p className="font-marker min-w-[88px] text-center text-[26px] leading-none">
+            {neck}
+            <span className="font-hand ml-0.5 text-[14px] text-muted-foreground">
+              cm
+            </span>
+          </p>
+          <button
+            type="button"
+            onClick={() => setNeck((n) => Math.min(NECK_MAX, n + 1))}
+            disabled={neck >= NECK_MAX}
+            aria-label="首回りを1cm増やす"
+            className="font-hand flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-[18px] leading-none transition-colors hover:border-foreground/50 disabled:opacity-30"
+          >
+            ＋
+          </button>
+          <div className="ml-auto flex gap-1.5">
+            {NECK_PRESETS.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setNeck(p)}
+                className={`font-hand flex h-11 min-w-11 items-center justify-center rounded-full border px-3 text-[14px] leading-none transition-colors ${
+                  neck === p
+                    ? "border-foreground/60 text-foreground"
+                    : "border-border text-muted-foreground hover:border-foreground/40"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div
+          aria-live="polite"
+          className="mt-4 grid grid-cols-2 gap-2.5"
+        >
+          <div
+            className="rounded-lg px-3 py-3"
+            style={{ background: "rgba(239,217,176,0.35)" }}
+          >
+            <p
+              className="font-hand text-[12px]"
+              style={{ color: "var(--bead-blue)" }}
+            >
+              ジャストサイズ（＋6cm）
+            </p>
+            <p className="font-marker mt-1 text-[24px] leading-none">
+              {just}cm
+            </p>
+          </div>
+          <div
+            className="rounded-lg px-3 py-3"
+            style={{ background: "rgba(239,217,176,0.35)" }}
+          >
+            <p
+              className="font-hand text-[12px]"
+              style={{ color: "var(--bead-rust)" }}
+            >
+              ゆったり（＋8〜10cm）
+            </p>
+            <p className="font-marker mt-1 text-[24px] leading-none">
+              {loose[0]}〜{loose[1]}cm
+            </p>
+          </div>
+        </div>
+        <p className="font-hand mt-3 text-[13px] leading-[1.7] text-muted-foreground">
+          {just === 38 || just === 41
+            ? `既製サイズの ${just}cm がそのままジャストです。`
+            : `サイズ選択の「カスタム」から ${just}cm を1cm単位・同価格で指定できます。`}
+        </p>
+      </div>
+    </section>
+
+    {/* 早見表 */}
+    <section className="mt-7">
+      <p
+        className="font-marker text-[17px] leading-none"
+        style={{ color: "var(--bead-blue)" }}
+      >
+        首回り早見表
+      </p>
+      <table className="font-hand mt-3 w-full text-left text-[15px]">
+        <thead>
+          <tr className="border-b border-border text-[13px] text-muted-foreground">
+            <th className="py-2 font-normal">首回り</th>
+            <th className="py-2 font-normal">ジャスト（＋6cm）</th>
+            <th className="py-2 font-normal">ゆったり（＋8〜10cm）</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border">
+          <tr>
+            <td className="py-2.5">30cm（細め）</td>
+            <td className="py-2.5 font-semibold">36cm</td>
+            <td className="py-2.5">38〜40cm</td>
+          </tr>
+          <tr>
+            <td className="py-2.5">32cm</td>
+            <td className="py-2.5 font-semibold">38cm</td>
+            <td className="py-2.5">40〜42cm</td>
+          </tr>
+          <tr>
+            <td className="py-2.5">35cm</td>
+            <td className="py-2.5 font-semibold">41cm</td>
+            <td className="py-2.5">43〜45cm</td>
+          </tr>
+          <tr>
+            <td className="py-2.5">39cm（しっかりめ）</td>
+            <td className="py-2.5 font-semibold">45cm</td>
+            <td className="py-2.5">47〜49cm</td>
+          </tr>
+        </tbody>
+      </table>
+      <p className="font-hand mt-2 text-[13px] leading-[1.7] text-muted-foreground">
+        首回り32cm前後なら既製の38cm、35cm前後なら41cmがジャスト。
+        男性の方など首回りがしっかりめの方は、45cm前後をカスタムで指定するのがおすすめです。
+      </p>
+    </section>
     </>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { SizeGuide } from "@/components/product/size-guide";
@@ -91,6 +92,12 @@ export function ProductBuy({
           <p className="font-hand mt-3 text-[12px] leading-[1.6] text-muted-foreground">
             手首まわりに少しゆとりを足した長さがおすすめです。迷ったら 17cm。
           </p>
+          <Link
+            href="/guide/length#bracelet"
+            className="font-hand mt-1 inline-flex min-h-11 items-center text-[14px] text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
+          >
+            長さの選び方 →
+          </Link>
         </div>
       )}
 
