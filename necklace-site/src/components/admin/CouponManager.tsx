@@ -6,10 +6,12 @@ import { useRouter } from "next/navigation";
 type Coupon = {
   id: string;
   code: string;
+  kindLabel: string;
+  source: "admin" | "line" | "purchase";
   note: string;
   percentOff: number | null;
   createdAt: number;
-  status: "unused" | "used" | "disabled";
+  status: "unused" | "reserved" | "used" | "disabled";
   redeemedAt: number | null;
 };
 
@@ -17,6 +19,10 @@ const STATUS: Record<Coupon["status"], { label: string; cls: string }> = {
   unused: {
     label: "未使用",
     cls: "border-emerald-700/40 bg-emerald-700/10 text-emerald-800",
+  },
+  reserved: {
+    label: "決済中",
+    cls: "border-amber-700/40 bg-amber-700/10 text-amber-800",
   },
   used: {
     label: "使用済み",
@@ -158,7 +164,7 @@ export function CouponManager({
         {issued ? (
           <div className="mt-5 rounded-xl border border-foreground bg-background p-4 text-center">
             <p className="text-base text-muted-foreground">
-              発行しました（{issued.percentOff ?? ""}%オフ・1回だけ）
+              発行しました（全商品{issued.percentOff ?? ""}%オフ・1回だけ）
             </p>
             <button
               ref={codeRef}
@@ -220,12 +226,12 @@ export function CouponManager({
                     {STATUS[c.status].label}
                   </span>
                 </div>
+                <p className="mt-2 text-base font-medium">{c.kindLabel}</p>
                 {c.note ? (
-                  <p className="mt-2 break-words text-base">{c.note}</p>
+                  <p className="mt-1 break-words text-base">{c.note}</p>
                 ) : null}
                 <p className="mt-2 text-base text-muted-foreground">
                   発行 {formatDate(c.createdAt)}
-                  {c.percentOff ? ` ・ ${c.percentOff}%オフ` : ""}
                   {c.status === "used"
                     ? ` ・ 使用 ${c.redeemedAt ? formatDate(c.redeemedAt) : "日時不明"}`
                     : ""}

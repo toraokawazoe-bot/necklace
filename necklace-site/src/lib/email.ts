@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { formatJPY } from "./utils";
+import { COUPON_KINDS, isCouponKind } from "./coupon-kinds";
 
 let _resend: Resend | null = null;
 function getResend(): Resend | null {
@@ -39,14 +40,23 @@ export type OrderEmailData = {
   // 送料・クーポン(あれば)。items は割引前の商品代、amountTotal は割引後・送料込みの支払い合計。
   shippingAmount?: number;
   couponCode?: string | null;
+  couponKind?: string | null;
   discountAmount?: number;
+  // ネックレス購入特典(ブレスレット専用 30%オフ・1 回限り)のコード
+  rewardCode?: string | null;
 };
+
+const SITE_URL = "https://www.740nll.store";
+
+function couponKindText(kind?: string | null): string {
+  return kind && isCouponKind(kind) ? `${COUPON_KINDS[kind].label} ` : "";
+}
 
 function formatPricePlain(data: OrderEmailData): string {
   const lines: string[] = [];
   if (data.discountAmount && data.discountAmount > 0) {
     lines.push(
-      `クーポン${data.couponCode ? `（${data.couponCode}）` : ""}　−${formatJPY(data.discountAmount)}`,
+      `クーポン　${couponKindText(data.couponKind)}${data.couponCode ?? ""}　−${formatJPY(data.discountAmount)}`,
     );
   }
   if (data.shippingAmount != null) {
@@ -102,6 +112,17 @@ export async function sendOrderConfirmationToCustomer(
     `通常 3〜7 営業日以内に発送いたします。`,
     `発送のご連絡は別途お送りします。`,
     ``,
+    ...(data.rewardCode
+      ? [
+          `── ブレスレット専用クーポン ──`,
+          `ネックレスをご購入いただいたお礼に、ブレスレットに使えるクーポンをお贈りします。`,
+          `コード　${data.rewardCode}`,
+          `ブレスレットが30%オフになります（1回限り・期限なし・送料は対象外）。`,
+          `ご注文時にカートのクーポン欄へ入力してください。`,
+          `${SITE_URL}/products?category=bracelet`,
+          ``,
+        ]
+      : []),
     `ご不明な点がございましたら、このメールにご返信いただくか`,
     `Instagram (@740nll) の DM までお気軽にご連絡ください。`,
     ``,
@@ -288,6 +309,7 @@ export async function sendOrderNotificationToOwner(
     ...(formatPricePlain(data) ? [formatPricePlain(data)] : []),
     ``,
     `合計　${formatJPY(data.amountTotal)}`,
+    ...(data.rewardCode ? [`特典クーポン発行　${data.rewardCode}（ブレスレット30%）`] : []),
     `決済方法　${data.paymentMethodSummary ?? "（未取得）"}`,
     ``,
     `── お客様情報 ──`,

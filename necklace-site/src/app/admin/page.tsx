@@ -1,3 +1,4 @@
+import { COUPON_KINDS, isCouponKind } from "@/lib/coupon-kinds";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/admin-session";
@@ -398,11 +399,21 @@ function OrdersTable({ orders }: { orders: StoredOrder[] }) {
 }
 
 function CouponNote({ order }: { order: StoredOrder }) {
-  if (!order.discountAmount) return null;
+  if (!order.discountAmount && !order.rewardCode) return null;
+  const kind =
+    order.couponKind && isCouponKind(order.couponKind)
+      ? COUPON_KINDS[order.couponKind].label
+      : null;
   return (
     <div className="mt-1 text-xs font-normal text-muted-foreground">
-      クーポン{order.couponCode ? ` ${order.couponCode}` : ""} −
-      {formatJPY(order.discountAmount)}
+      {order.discountAmount ? (
+        <div>
+          クーポン{kind ? ` ${kind}` : ""}
+          {order.couponCode ? ` ${order.couponCode}` : ""} −
+          {formatJPY(order.discountAmount)}
+        </div>
+      ) : null}
+      {order.rewardCode ? <div>特典クーポン発行 {order.rewardCode}</div> : null}
     </div>
   );
 }

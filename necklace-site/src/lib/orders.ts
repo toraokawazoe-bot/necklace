@@ -46,7 +46,11 @@ export type StoredOrder = {
   shippingSummary: string | null;
   // クーポン利用時のみ。割引額は円(正の数)、couponCode は使われたコード(取れなければ無し)。
   couponCode?: string;
+  // クーポンの種類(general30 / necklace10 / bracelet30)
+  couponKind?: string;
   discountAmount?: number;
+  // この注文の特典として発行したブレスレット専用クーポンのコード
+  rewardCode?: string;
   shippedAt?: number;
   carrier?: Carrier;
   trackingNumber?: string;

@@ -11,8 +11,26 @@ export const metadata: Metadata = {
   description: "すべてのネックレス",
 };
 
-export default async function ProductsPage() {
-  const products = await listAllProductsWithInventory();
+// ?category=necklace|bracelet|glasses-chain で絞り込む(クーポン導線のリンク用)。無ければ全商品。
+const CATEGORY_TITLE: Record<string, string> = {
+  necklace: "ネックレス",
+  bracelet: "ブレスレット",
+  "glasses-chain": "メガネチェーン",
+};
+
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
+  const { category } = await searchParams;
+  const all = await listAllProductsWithInventory();
+  const filter =
+    category && Object.hasOwn(CATEGORY_TITLE, category) ? category : null;
+  const products = filter
+    ? all.filter((p) => (p.category ?? "necklace") === filter)
+    : all;
+  const title = filter ? CATEGORY_TITLE[filter] : "ネックレス";
   return (
     <div className="mx-auto max-w-[1400px] px-6 py-16 md:px-10 md:py-24">
       <header className="mb-10 max-w-3xl md:mb-14">
@@ -25,7 +43,7 @@ export default async function ProductsPage() {
         <h1 className="font-crayon-jp crayon-fx mt-7 text-[clamp(2.8rem,7.5vw,5.4rem)] leading-[1.1] tracking-tight">
           <span style={{ color: "var(--bead-brown)" }}>すべての</span>
           <br className="md:hidden" />
-          ネックレス
+          {title}
         </h1>
         <p className="font-hand mt-10 max-w-md text-[19px] leading-[1.95] text-foreground">
           すべて一点ずつ手で編んでいます。ビーズの並びや色合いには微妙な

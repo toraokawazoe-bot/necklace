@@ -17,6 +17,15 @@ export function CartDrawer() {
   // 決済ページへ移動中。Stripe から戻る(bfcache 復元)時は pageshow で解除する。
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // クーポン: 入力中の文字と、サーバーで確認できた適用結果
+  const [couponInput, setCouponInput] = useState("");
+  const [couponBusy, setCouponBusy] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [appliedCoupon, setCoupon] = useState<{
+    code: string;
+    discount: number;
+    sig: string;
+  } | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -72,6 +81,47 @@ export function CartDrawer() {
     0,
   );
 
+  // カートの中身が変わったら、確認済みの割引は外す(再度「適用」すると計算し直す)。サーバーは決済時にも計算し直す。
+  const cartSignature = lines.map((l) => `${l.productId}:${l.size}:${l.qty}`).join("|");
+  const coupon = appliedCoupon?.sig === cartSignature ? appliedCoupon : null;
+
+  const applyCoupon = async () => {
+    const code = couponInput.trim();
+    if (!code) return;
+    setCouponBusy(true);
+    setCouponError(null);
+    try {
+      const res = await fetch("/api/coupon/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code,
+          lines: cartItems.map(({ line, product }) => ({
+            productId: product.id,
+            qty: line.qty,
+          })),
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        code?: string;
+        discount?: number;
+        error?: string;
+      };
+      if (!res.ok || !data.ok || !data.code || !data.discount) {
+        setCoupon(null);
+        setCouponError(data.error ?? "クーポンを確認できませんでした。");
+        return;
+      }
+      setCoupon({ code: data.code, discount: data.discount, sig: cartSignature });
+      setCouponInput("");
+    } catch {
+      setCouponError("通信に失敗しました。もう一度お試しください。");
+    } finally {
+      setCouponBusy(false);
+    }
+  };
+
   const handleCheckout = () => {
     setError(null);
     if (cartItems.length === 0) {
@@ -94,6 +144,7 @@ export function CartDrawer() {
               size: line.size,
               qty: line.qty,
             })),
+            ...(coupon ? { couponCode: coupon.code } : {}),
           }),
         });
         const data = (await res.json().catch(() => ({}))) as {
@@ -254,14 +305,78 @@ export function CartDrawer() {
 
         {cartItems.length > 0 && (
           <footer className="border-t border-border px-6 py-5">
+            {coupon ? (
+              <div className="mb-4 flex items-center justify-between gap-3 text-[16px]">
+                <span className="break-all">
+                  クーポン <span className="font-mono">{coupon.code}</span>
+                </span>
+                <span className="flex shrink-0 items-center gap-3">
+                  <span className="tabular-nums">−{formatJPY(coupon.discount)}</span>
+                  <button
+                    type="button"
+                    onClick={() => setCoupon(null)}
+                    className="min-h-11 px-1 text-[16px] underline underline-offset-4"
+                  >
+                    外す
+                  </button>
+                </span>
+              </div>
+            ) : (
+              <div className="mb-4">
+                <label htmlFor="cart-coupon" className="block text-[16px]">
+                  クーポンコード
+                </label>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    id="cart-coupon"
+                    type="text"
+                    value={couponInput}
+                    onChange={(e) => setCouponInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void applyCoupon();
+                    }}
+                    autoCapitalize="characters"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    placeholder="740-XXXXXX"
+                    disabled={couponBusy || isPending}
+                    className="min-h-11 min-w-0 flex-1 border border-border bg-transparent px-3 font-mono text-[16px]"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 shrink-0 px-5 text-[16px]"
+                    onClick={() => void applyCoupon()}
+                    disabled={couponBusy || isPending || !couponInput.trim()}
+                  >
+                    {couponBusy ? "確認中…" : "適用"}
+                  </Button>
+                </div>
+                {couponError && (
+                  <p className="mt-2 text-[16px] leading-snug text-red-700" role="alert">
+                    {couponError}
+                  </p>
+                )}
+              </div>
+            )}
             <div className="flex items-baseline justify-between">
               <span className="text-xs uppercase tracking-widest text-muted-foreground">
                 Subtotal
               </span>
               <span className="font-hand text-2xl">{formatJPY(subtotal)}</span>
             </div>
+            {coupon && (
+              <div className="mt-1 flex items-baseline justify-between">
+                <span className="text-xs uppercase tracking-widest text-muted-foreground">
+                  After coupon
+                </span>
+                <span className="font-hand text-xl">
+                  {formatJPY(Math.max(0, subtotal - coupon.discount))}
+                </span>
+              </div>
+            )}
             <p className="mt-1 text-xs text-muted-foreground">
-              送料・税は次の画面で計算されます。
+              送料は次の画面で加算されます（クーポンの対象外）。
             </p>
             {error && (
               <p className="mt-3 text-xs text-red-700" role="alert">

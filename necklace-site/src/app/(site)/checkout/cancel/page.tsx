@@ -1,9 +1,18 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { ReleaseCouponOnMount } from "./release-coupon";
 
-export default function CancelPage() {
+export const dynamic = "force-dynamic";
+
+export default async function CancelPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ session_id?: string }>;
+}) {
+  const { session_id } = await searchParams;
   return (
     <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center px-6 py-20 text-center">
+      <ReleaseCouponOnMount sessionId={session_id ?? null} />
       <p className="text-[11px] uppercase tracking-[0.28em] text-muted-foreground">
         Checkout canceled
       </p>

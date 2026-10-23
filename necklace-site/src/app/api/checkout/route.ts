@@ -8,9 +8,19 @@ import {
   sizeNameSuffix,
 } from "@/lib/product-category";
 import { checkoutLimiter, enforce, getClientIp } from "@/lib/ratelimit";
+import { randomUUID } from "node:crypto";
+import {
+  CHECKOUT_EXPIRES_SECONDS,
+  parseCouponCode,
+  releaseCoupon,
+  reserveCoupon,
+} from "@/lib/coupons";
+import { COUPON_KINDS, calcDiscount, type DiscountLine } from "@/lib/coupon-kinds";
+import { couponReasonMessage, couponWrongCartMessage } from "@/lib/coupon-messages";
 
 type CheckoutRequest = {
   lines: { productId: string; size: number; qty: number }[];
+  couponCode?: string;
 };
 
 // 長さの検証ルールはカテゴリごとに lib/product-category.ts にある
@@ -60,6 +70,8 @@ export async function POST(req: Request) {
   // 在庫チェック・減算用: 商品ごとの合計数量
   const qtyByProduct = new Map<string, number>();
   const stockMeta: Record<string, string> = {};
+  // クーポン計算用: 行ごとのカテゴリと商品代(送料は含めない)
+  const discountLines: DiscountLine[] = [];
 
   if (body.lines.length > MAX_LINES) {
     return NextResponse.json(
@@ -135,11 +147,71 @@ export async function POST(req: Request) {
         },
       },
     });
+    discountLines.push({
+      category: product.category,
+      amount: product.price * qty,
+    });
     stockMeta[`stock_${lineItems.length - 1}`] = `${product.id}:${qty}`;
     summaryParts.push(`${line.productId}:${size}`);
   }
 
   const stripe = getStripe();
+
+  // --- クーポン(カートの入力欄から来たコードを、ここで検証して割引額を決める) ---
+  // 検証 → 予約(同時に 1 人だけ) → この注文専用の amount_off Coupon を作る。
+  // Stripe に渡す割引は「対象カテゴリの商品代 × 割引率」だけ。送料(shipping_options)には掛からない。
+  let couponCode: string | null = null;
+  let couponKind: string | null = null;
+  const couponToken = `t_${randomUUID()}`;
+  let stripeCouponId: string | null = null;
+  const rawCoupon =
+    typeof body.couponCode === "string" ? body.couponCode.trim() : "";
+  if (rawCoupon) {
+    const code = parseCouponCode(rawCoupon);
+    if (!code) {
+      return NextResponse.json(
+        { error: "クーポンコードの形式が正しくありません。もう一度ご確認ください。" },
+        { status: 400 },
+      );
+    }
+    const reserved = await reserveCoupon(code, couponToken);
+    if (!reserved.ok) {
+      return NextResponse.json(
+        { error: couponReasonMessage(reserved.reason) },
+        { status: reserved.reason === "unavailable" ? 503 : 400 },
+      );
+    }
+    const { discount } = calcDiscount(reserved.kind, discountLines);
+    if (discount <= 0) {
+      await releaseCoupon(code, couponToken);
+      return NextResponse.json(
+        { error: couponWrongCartMessage(reserved.kind) },
+        { status: 400 },
+      );
+    }
+    try {
+      const c = await stripe.coupons.create({
+        amount_off: discount,
+        currency: "jpy",
+        duration: "once",
+        max_redemptions: 1,
+        name: `740NLL ${COUPON_KINDS[reserved.kind].percentOff}%オフ`,
+        metadata: { source: "740nll-cart", code, kind: reserved.kind },
+      });
+      stripeCouponId = c.id;
+    } catch (e) {
+      console.error("[checkout] stripe coupon create failed:", e);
+      await releaseCoupon(code, couponToken);
+      return NextResponse.json(
+        { error: "クーポンの適用に失敗しました。時間をおいてもう一度お試しください。" },
+        { status: 500 },
+      );
+    }
+    couponCode = code;
+    couponKind = reserved.kind;
+  }
+
+  const hasNecklace = discountLines.some((l) => l.category === "necklace");
   const summary = summaryParts.join(",").slice(0, 480);
   const baseParams: Stripe.Checkout.SessionCreateParams = {
     mode: "payment",
@@ -162,15 +234,25 @@ export async function POST(req: Request) {
         },
       },
     ],
-    // 決済画面でクーポン(Promotion Code)を入力できるようにする。
-    // 割引は商品代(line_items)だけにかかり、上の shipping_options の送料 150 円は割引されない。
-    allow_promotion_codes: true,
+    // クーポンはカートで入力済み。割引(discounts)は商品代だけにかかり、送料 150 円は割引されない。
+    // discounts と allow_promotion_codes は同時に使えないので、Stripe 画面のコード欄は出さない。
+    ...(stripeCouponId
+      ? {
+          discounts: [{ coupon: stripeCouponId }],
+          // 予約の寿命(40分)より先にセッションが切れるようにする。
+          expires_at: Math.floor(Date.now() / 1000) + CHECKOUT_EXPIRES_SECONDS,
+        }
+      : {}),
     locale: "ja",
     success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${origin}/checkout/cancel`,
+    cancel_url: `${origin}/checkout/cancel?session_id={CHECKOUT_SESSION_ID}`,
     automatic_tax: { enabled: false },
     metadata: {
       line_summary: summary,
+      has_necklace: hasNecklace ? "1" : "0",
+      ...(couponCode
+        ? { coupon_code: couponCode, coupon_kind: couponKind!, coupon_token: couponToken }
+        : {}),
       product_ids: body.lines.map((l) => l.productId).join(",").slice(0, 480),
       ...stockMeta,
     },
@@ -195,6 +277,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ url: session.url });
   } catch (err) {
     console.error("[checkout] session create failed:", err);
+    // 決済ページが作れなかったので、予約したクーポンを未使用に戻す
+    if (couponCode) await releaseCoupon(couponCode, couponToken).catch(() => {});
     return NextResponse.json(
       {
         error:

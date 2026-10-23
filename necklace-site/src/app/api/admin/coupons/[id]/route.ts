@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-session";
-import { disableCoupon } from "@/lib/coupons";
+import { disableCoupon, parseCouponCode } from "@/lib/coupons";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,11 +15,15 @@ export async function DELETE(
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const { id } = await ctx.params;
-  if (!/^promo_[A-Za-z0-9]+$/.test(id)) {
+  const code = parseCouponCode(id);
+  if (!code) {
     return NextResponse.json({ error: "invalid id" }, { status: 400 });
   }
   try {
-    const result = await disableCoupon(id);
+    const result = await disableCoupon(code);
+    if (result === "reserved") {
+      return NextResponse.json({ error: "決済の手続き中のため、いまは無効にできません" }, { status: 409 });
+    }
     if (result === "not_found") {
       return NextResponse.json({ error: "クーポンが見つかりません" }, { status: 404 });
     }

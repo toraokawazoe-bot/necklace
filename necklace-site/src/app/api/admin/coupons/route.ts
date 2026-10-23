@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-session";
-import {
-  DEFAULT_PERCENT_OFF,
-  isValidPercent,
-  issueCoupon,
-  listCoupons,
-} from "@/lib/coupons";
+import { issueAdminCoupon, listCoupons } from "@/lib/coupons";
 import { couponLimiter, enforce } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
@@ -38,7 +33,7 @@ export async function POST(req: Request) {
     );
   }
 
-  let body: { note?: unknown; percentOff?: unknown } = {};
+  let body: { note?: unknown } = {};
   try {
     body = (await req.json()) as typeof body;
   } catch {
@@ -47,14 +42,9 @@ export async function POST(req: Request) {
   if (body.note != null && typeof body.note !== "string") {
     return NextResponse.json({ error: "invalid note" }, { status: 400 });
   }
-  const percentOff = body.percentOff ?? DEFAULT_PERCENT_OFF;
-  if (!isValidPercent(percentOff)) {
-    return NextResponse.json({ error: "invalid percentOff" }, { status: 400 });
-  }
 
   try {
-    const coupon = await issueCoupon({
-      percentOff,
+    const coupon = await issueAdminCoupon({
       note: body.note as string | undefined,
       issuedBy: session.email,
     });

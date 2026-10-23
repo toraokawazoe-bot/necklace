@@ -13,7 +13,12 @@ import {
   type OrderEmailData,
   type OrderItem,
 } from "@/lib/email";
-import { resolveSessionDiscount } from "@/lib/coupons";
+import {
+  issueBraceletReward,
+  markCouponUsed,
+  releaseCoupon,
+  resolveSessionDiscount,
+} from "@/lib/coupons";
 import { markOrderRefunded, recordOrder, type StoredOrder } from "@/lib/orders";
 
 export const runtime = "nodejs";
@@ -117,6 +122,15 @@ async function handlePaid(session: Stripe.Checkout.Session) {
     amountTotal: li.amount_subtotal ?? li.amount_total ?? 0,
   }));
   const discount = await resolveSessionDiscount(session);
+  // 使われたクーポンを使用済みにする(再送されても結果は同じ)
+  const usedCode = session.metadata?.coupon_code;
+  if (usedCode) await markCouponUsed(usedCode, session.id);
+  // ネックレスを含む注文には、ブレスレット専用 30%オフを 1 枚(注文 ID で冪等)。
+  // 購入完了画面も同じ関数を呼ぶので、どちらが先でも同じコードになる。
+  const reward =
+    session.metadata?.has_necklace === "1"
+      ? await issueBraceletReward(session.id)
+      : null;
   const shippingAmount = session.total_details?.amount_shipping ?? 0;
 
   const customerEmail =
@@ -148,6 +162,8 @@ async function handlePaid(session: Stripe.Checkout.Session) {
     shippingAmount,
     couponCode: discount?.code ?? null,
     discountAmount: discount?.amount ?? 0,
+    couponKind: discount?.kind ?? null,
+    rewardCode: reward?.code ?? null,
   };
 
   const shippingSummary = (() => {
@@ -176,8 +192,10 @@ async function handlePaid(session: Stripe.Checkout.Session) {
       ? {
           discountAmount: discount.amount,
           ...(discount.code ? { couponCode: discount.code } : {}),
+          ...(discount.kind ? { couponKind: discount.kind } : {}),
         }
       : {}),
+    ...(reward ? { rewardCode: reward.code } : {}),
   };
 
   // 各ステップは注文(session.id)単位で冪等。途中で失敗して Stripe が再送しても、
@@ -302,6 +320,11 @@ async function handleFailure(
   };
 
   await recordOrder(stored);
+
+  // 失敗・期限切れ: 予約していたクーポンを未使用に戻す
+  const code = session.metadata?.coupon_code;
+  const token = session.metadata?.coupon_token;
+  if (code && token) await releaseCoupon(code, token);
 
   if (await claimOnce(`${reason}-mail:${session.id}`)) {
     const tasks: Promise<unknown>[] = [];
