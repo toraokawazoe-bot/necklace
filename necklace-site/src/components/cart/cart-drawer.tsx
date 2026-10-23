@@ -8,6 +8,7 @@ import { useCart } from "@/lib/cart-store";
 import type { Product } from "@/lib/products";
 import { Button } from "@/components/ui/button";
 import { formatJPY } from "@/lib/utils";
+import { readFirstRef } from "@/lib/first-ref";
 import { displayName, displaySubtitle, imageAlt } from "@/lib/product-display";
 
 // 送料(全国一律)。チェックアウトAPI(shipping_options)の金額と合わせる。
@@ -149,6 +150,7 @@ export function CartDrawer() {
               qty: line.qty,
             })),
             ...(coupon ? { couponCode: coupon.code } : {}),
+            ...(readFirstRef() ? { ref: readFirstRef() } : {}),
           }),
         });
         const data = (await res.json().catch(() => ({}))) as {

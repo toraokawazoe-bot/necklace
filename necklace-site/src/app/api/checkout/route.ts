@@ -17,10 +17,14 @@ import {
 } from "@/lib/coupons";
 import { COUPON_KINDS, calcDiscount, type DiscountLine } from "@/lib/coupon-kinds";
 import { couponReasonMessage, couponWrongCartMessage } from "@/lib/coupon-messages";
+import { classifyUserAgent } from "@/lib/abandoned-core";
+import { recordCheckoutStarted } from "@/lib/abandoned";
 
 type CheckoutRequest = {
   lines: { productId: string; size: number; qty: number }[];
   couponCode?: string;
+  // 最初に来た時の流入元(ホスト名だけ。例: l.threads.com)。止まった決済の分析用。
+  ref?: string;
 };
 
 // 長さの検証ルールはカテゴリごとに lib/product-category.ts にある
@@ -70,6 +74,8 @@ export async function POST(req: Request) {
   // 在庫チェック・減算用: 商品ごとの合計数量
   const qtyByProduct = new Map<string, number>();
   const stockMeta: Record<string, string> = {};
+  // 止まった決済の記録用: 商品 ID → 表示名
+  const productNames: Record<string, string> = {};
   // クーポン計算用: 行ごとのカテゴリと商品代(送料は含めない)
   const discountLines: DiscountLine[] = [];
 
@@ -127,6 +133,7 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
+    productNames[product.id] = `${product.name} — ${product.subtitle}`;
     const description = [
       product.material,
       sizeDescription(product.category, size),
@@ -273,6 +280,18 @@ export async function POST(req: Request) {
         ...baseParams,
         payment_method_types: ["card"],
       });
+    }
+    // 決済画面を開いた時点の端末・流入元を残す(あとで「なぜ止まったか」を見るため)。失敗しても決済は止めない。
+    try {
+      const rawRef = typeof body.ref === "string" ? body.ref.slice(0, 80) : "";
+      await recordCheckoutStarted({
+        session,
+        device: classifyUserAgent(req.headers.get("user-agent")),
+        referrer: /^[A-Za-z0-9().:_-]+$/.test(rawRef) ? rawRef : undefined,
+        productNames,
+      });
+    } catch (e) {
+      console.error("[checkout] abandoned record failed:", e);
     }
     return NextResponse.json({ url: session.url });
   } catch (err) {

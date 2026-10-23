@@ -43,6 +43,12 @@ export default async function AdminDashboard() {
             商品管理
           </Link>
           <Link
+            href="/admin/abandoned"
+            className="rounded-full border border-border px-4 py-1.5 text-sm transition hover:bg-foreground hover:text-background"
+          >
+            止まった決済
+          </Link>
+          <Link
             href="/admin/coupons"
             className="rounded-full border border-border px-4 py-1.5 text-sm transition hover:bg-foreground hover:text-background"
           >
@@ -88,7 +94,7 @@ export default async function AdminDashboard() {
           value={orders.paidCount.toLocaleString()}
           sub={
             orders.failedCount + orders.expiredCount > 0
-              ? `失敗/期限切れ ${orders.failedCount + orders.expiredCount}`
+              ? `失敗/期限切れ ${orders.failedCount + orders.expiredCount}(理由は「止まった決済」へ)`
               : undefined
           }
         />

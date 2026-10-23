@@ -20,6 +20,7 @@ import {
   resolveSessionDiscount,
 } from "@/lib/coupons";
 import { markOrderRefunded, recordOrder, type StoredOrder } from "@/lib/orders";
+import { appendFailedAttempt, refreshFromStripe } from "@/lib/abandoned";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -90,12 +91,24 @@ async function dispatch(event: Stripe.Event) {
     }
     case "checkout.session.async_payment_failed": {
       const session = event.data.object as Stripe.Checkout.Session;
-      await handleFailure(session, "failed");
+      await handleFailure(session, "failed", event);
       break;
     }
     case "checkout.session.expired": {
       const session = event.data.object as Stripe.Checkout.Session;
-      await handleFailure(session, "expired");
+      await handleFailure(session, "expired", event);
+      break;
+    }
+    // 支払いを試して失敗した1回ごとに、止まった理由を管理画面の「止まった決済」へ足す。
+    // (Stripe のダッシュボードでこのイベントの購読を追加しないと届かない。届かなくても期限切れ時に Charge から復元する)
+    case "payment_intent.payment_failed": {
+      const intent = event.data.object as Stripe.PaymentIntent;
+      try {
+        await appendFailedAttempt(intent);
+      } catch (e) {
+        // 分析用の記録なので、失敗しても Stripe に再送させない
+        console.error(`[webhook] abandoned attempt record failed for ${intent.id}:`, e);
+      }
       break;
     }
     case "charge.refunded": {
@@ -202,6 +215,10 @@ async function handlePaid(session: Stripe.Checkout.Session) {
   // 注文の二重登録・在庫の二重減算・メールの二重送信は起きない。
   await recordOrder(stored);
   await applyStock(session);
+  // 「止まった決済」の分母として、支払い完了も記録に残す(途中で失敗した試行があれば一緒に)
+  await refreshFromStripe(session).catch((e) =>
+    console.error(`[webhook] abandoned record (paid) failed for ${session.id}:`, e),
+  );
 
   if (await claimOnce(`paid-mail:${session.id}`)) {
     const tasks: Promise<unknown>[] = [];
@@ -302,6 +319,7 @@ async function handleRefund(charge: Stripe.Charge) {
 async function handleFailure(
   session: Stripe.Checkout.Session,
   reason: "failed" | "expired",
+  event: Stripe.Event,
 ) {
   const customerEmail =
     session.customer_details?.email ?? session.customer_email ?? null;
@@ -320,6 +338,15 @@ async function handleFailure(
   };
 
   await recordOrder(stored);
+
+  // 止まった理由・進み具合を、Stripe から読み直して保存する(分析用。失敗しても注文処理は止めない)。
+  // event.request が付いていれば API(戻るボタンの自前 API 等)で閉じた、無ければ期限で自動的に閉じた。
+  await refreshFromStripe(session, {
+    endedAt: event.created * 1000,
+    expiredByApi: reason === "expired" ? Boolean(event.request?.id) : undefined,
+  }).catch((e) =>
+    console.error(`[webhook] abandoned record failed for ${session.id}:`, e),
+  );
 
   // 失敗・期限切れ: 予約していたクーポンを未使用に戻す
   const code = session.metadata?.coupon_code;

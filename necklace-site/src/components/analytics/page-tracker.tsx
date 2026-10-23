@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { rememberFirstRef } from "@/lib/first-ref";
 
 export function PageTracker() {
   return (
@@ -19,6 +20,7 @@ function PageTrackerInner() {
   useEffect(() => {
     if (!pathname) return;
     if (pathname.startsWith("/admin")) return;
+    rememberFirstRef();
 
     const path = searchParams?.toString()
       ? `${pathname}?${searchParams.toString()}`

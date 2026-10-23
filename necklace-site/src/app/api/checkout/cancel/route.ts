@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { releaseCoupon } from "@/lib/coupons";
+import { markCheckoutBack } from "@/lib/abandoned";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +22,12 @@ export async function POST(req: Request) {
   try {
     const stripe = getStripe();
     const session = await stripe.checkout.sessions.retrieve(sessionId);
+    // 「戻るボタンで中断した」印。期限切れの理由を区別するために残す(失敗しても処理は続ける)。
+    if (session.status !== "complete") {
+      await markCheckoutBack(sessionId).catch((e) =>
+        console.error("[checkout/cancel] mark back failed:", e),
+      );
+    }
     if (session.status === "open") {
       await stripe.checkout.sessions.expire(sessionId);
     }
