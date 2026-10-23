@@ -8,6 +8,10 @@ import { useCart } from "@/lib/cart-store";
 import type { Product } from "@/lib/products";
 import { Button } from "@/components/ui/button";
 import { formatJPY } from "@/lib/utils";
+import { displayName, displaySubtitle, imageAlt } from "@/lib/product-display";
+
+// 送料(全国一律)。チェックアウトAPI(shipping_options)の金額と合わせる。
+const SHIPPING_FEE = 150;
 import { isValidSize, resolveCategory, sizeLabel } from "@/lib/product-category";
 
 export function CartDrawer() {
@@ -185,7 +189,7 @@ export function CartDrawer() {
         }`}
       >
         <header className="flex items-center justify-between border-b border-border px-6 py-5">
-          <h2 className="wordmark text-sm">Cart</h2>
+          <h2 className="wordmark text-sm">カート</h2>
           <button
             onClick={close}
             aria-label="閉じる"
@@ -199,13 +203,13 @@ export function CartDrawer() {
           {!hydrated ? null : cartItems.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
               <p className="font-hand text-2xl text-foreground">
-                Your cart is quiet.
+                カート
               </p>
               <p className="text-sm text-muted-foreground">
-                まだ何も入っていません。
+                カートに商品は入っていません。
               </p>
               <Link href="/products" onClick={close}>
-                <Button variant="outline">商品を見る</Button>
+                <Button variant="outline">アクセサリーを見る</Button>
               </Link>
             </div>
           ) : (
@@ -223,7 +227,7 @@ export function CartDrawer() {
                   >
                     <Image
                       src={product.image}
-                      alt={product.imageAlt}
+                      alt={imageAlt(product.name, product.category)}
                       fill
                       sizes="80px"
                       className="object-cover"
@@ -236,10 +240,10 @@ export function CartDrawer() {
                         onClick={close}
                         className="block font-hand text-lg leading-tight"
                       >
-                        {product.name}
+                        {displayName(product.name)}
                       </Link>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        {product.subtitle}
+                        {displaySubtitle(product.name, product.subtitle)}
                       </p>
                       {isLineInvalid({ line, product }) ? (
                         <p className="mt-1 text-xs text-red-700" role="alert">
@@ -262,7 +266,7 @@ export function CartDrawer() {
                         </p>
                       ) : null}
                       <p className="mt-2 text-sm">
-                        {formatJPY(product.price)}
+                        {formatJPY(product.price)}（税込）
                       </p>
                     </div>
                     <div className="mt-3 flex items-center justify-between">
@@ -291,9 +295,9 @@ export function CartDrawer() {
                       </div>
                       <button
                         onClick={() => remove(product.id, line.size)}
-                        className="text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground"
+                        className="min-h-11 px-1 text-xs tracking-widest text-muted-foreground hover:text-foreground"
                       >
-                        Remove
+                        カートから削除
                       </button>
                     </div>
                   </div>
@@ -360,23 +364,39 @@ export function CartDrawer() {
               </div>
             )}
             <div className="flex items-baseline justify-between">
-              <span className="text-xs uppercase tracking-widest text-muted-foreground">
-                Subtotal
+              <span className="text-xs tracking-widest text-muted-foreground">
+                商品小計
               </span>
               <span className="font-hand text-2xl">{formatJPY(subtotal)}</span>
             </div>
             {coupon && (
               <div className="mt-1 flex items-baseline justify-between">
-                <span className="text-xs uppercase tracking-widest text-muted-foreground">
-                  After coupon
+                <span className="text-xs tracking-widest text-muted-foreground">
+                  クーポン適用後
                 </span>
                 <span className="font-hand text-xl">
                   {formatJPY(Math.max(0, subtotal - coupon.discount))}
                 </span>
               </div>
             )}
+            <div className="mt-1 flex items-baseline justify-between">
+              <span className="text-xs tracking-widest text-muted-foreground">
+                送料
+              </span>
+              <span className="font-hand text-xl">{formatJPY(SHIPPING_FEE)}</span>
+            </div>
+            <div className="mt-2 flex items-baseline justify-between border-t border-border pt-2">
+              <span className="text-xs tracking-widest text-muted-foreground">
+                合計（税込）
+              </span>
+              <span className="font-hand text-2xl">
+                {formatJPY(
+                  Math.max(0, subtotal - (coupon?.discount ?? 0)) + SHIPPING_FEE,
+                )}
+              </span>
+            </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              送料は次の画面で加算されます（クーポンの対象外）。
+              送料は全国一律です。クーポンの対象外です。
             </p>
             {error && (
               <p className="mt-3 text-xs text-red-700" role="alert">
@@ -389,7 +409,7 @@ export function CartDrawer() {
               onClick={handleCheckout}
               disabled={isPending || hasInvalid}
             >
-              {isPending ? "Redirecting…" : "Checkout"}
+              {isPending ? "お支払い画面へ移動しています…" : "購入手続きへ"}
             </Button>
           </footer>
         )}

@@ -22,7 +22,7 @@ export default async function CancelPage({
       </p>
       <div className="mt-10 flex gap-3">
         <Link href="/products">
-          <Button variant="outline">買い物に戻る</Button>
+          <Button variant="outline">お買い物を続ける</Button>
         </Link>
       </div>
     </div>

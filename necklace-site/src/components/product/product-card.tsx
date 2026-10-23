@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "@/lib/products";
 import { formatJPY } from "@/lib/utils";
+import { displayName, displaySubtitle, imageAlt } from "@/lib/product-display";
 
 const ACCENT_COLORS = [
   "var(--bead-blue)",
@@ -50,7 +51,7 @@ export function ProductCard({
 
         <Image
           src={product.image}
-          alt={product.imageAlt}
+          alt={imageAlt(product.name, product.category)}
           fill
           sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
           className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
@@ -59,23 +60,26 @@ export function ProductCard({
 
         {!product.inStock && (
           <span className="font-hand absolute bottom-3 left-3 z-20 bg-background/90 px-2 py-1 text-[12px] font-semibold text-muted-foreground">
-            Sold out
+            売り切れ
           </span>
         )}
       </div>
 
       <div className="mt-4 space-y-1.5">
         <h3 className="font-crayon text-[22px] leading-[1.2] text-foreground md:text-[24px]">
-          {product.name}
+          {displayName(product.name)}
         </h3>
         <p className="font-crayon text-[14px] leading-[1.35] text-muted-foreground md:text-[15px]">
-          {product.subtitle}
+          {displaySubtitle(product.name, product.subtitle)}
         </p>
         <p
           className="font-crayon pt-1 text-[24px] leading-none tabular-nums md:text-[26px]"
           style={{ color: accent }}
         >
           {formatJPY(product.price)}
+          <span className="font-hand ml-1 text-[12px] text-muted-foreground">
+            （税込）
+          </span>
         </p>
       </div>
     </Link>

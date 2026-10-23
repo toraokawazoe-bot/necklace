@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "特定商取引法に基づく表記",
+  title: { absolute: "特定商取引法に基づく表記｜740NLL" },
 };
 
 const ROWS: { label: string; value: React.ReactNode }[] = [
@@ -30,7 +30,7 @@ const ROWS: { label: string; value: React.ReactNode }[] = [
       </a>
     ),
   },
-  { label: "販売価格", value: "各商品ページに記載の価格（税込）" },
+  { label: "販売価格", value: "各商品ページに税込価格を表示しています。" },
   {
     label: "商品代金以外の必要料金",
     value: (
@@ -107,7 +107,7 @@ export default function TokushohoPage() {
         特定商取引法に基づく表記
       </h1>
       <p className="font-hand mt-6 text-[15px] leading-[1.85] text-foreground/80">
-        本ページは、特定商取引法第 11 条に基づく表記です。本表記は予告なく変更される場合があります。
+        販売事業者と、ご注文・お支払い・発送・返品に関する条件をご案内します。本ページは特定商取引法第 11 条に基づく表記で、予告なく変更される場合があります。
       </p>
 
       <dl className="mt-12 divide-y divide-border border-y border-border">

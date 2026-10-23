@@ -1,12 +1,11 @@
 import { Star } from "@/components/star";
 
 const ITEMS = [
-  "Handmade in Japan",
+  "ひとつずつ手編み",
   "740NLL",
-  "¥2,500 each",
+  "ネックレス ¥2,500（税込）",
+  "ブレスレット ¥1,700（税込）",
   "全国一律送料 ¥150",
-  "One at a time",
-  "Beaded by hand",
 ];
 
 export function Marquee() {

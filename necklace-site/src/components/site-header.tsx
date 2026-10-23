@@ -11,26 +11,37 @@ export function SiteHeader() {
         >
           740NLL
         </Link>
-        <nav className="flex items-center gap-6 md:gap-8">
+        <nav className="flex items-center gap-3.5 sm:gap-6 md:gap-8">
           <Link
             href="/products"
-            className="font-marker text-2xl leading-none transition-colors hover:opacity-80"
+            aria-label="商品一覧"
+            className="font-marker text-[22px] leading-none sm:text-2xl transition-colors hover:opacity-80"
             style={{ color: "var(--bead-blue)" }}
           >
             Shop
           </Link>
           <Link
             href="/about"
-            className="font-marker text-2xl leading-none transition-colors hover:opacity-80"
+            aria-label="ブランドについて"
+            className="font-marker text-[22px] leading-none sm:text-2xl transition-colors hover:opacity-80"
             style={{ color: "var(--bead-brown)" }}
           >
             About
+          </Link>
+          <Link
+            href="/care"
+            aria-label="お手入れ"
+            className="font-marker text-[22px] leading-none sm:text-2xl transition-colors hover:opacity-80"
+            style={{ color: "var(--bead-olive)" }}
+          >
+            Care
           </Link>
           <a
             href="https://www.instagram.com/740nll/"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-marker text-2xl leading-none transition-colors hover:opacity-80"
+            aria-label="Instagram（新しいタブで開きます）"
+            className="font-marker text-[22px] leading-none sm:text-2xl transition-colors hover:opacity-80"
             style={{ color: "var(--bead-rust)" }}
           >
             Instagram

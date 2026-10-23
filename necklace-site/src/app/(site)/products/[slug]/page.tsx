@@ -10,6 +10,12 @@ import {
 import { ProductBuy } from "@/components/product/product-buy";
 import { ProductCard } from "@/components/product/product-card";
 import { formatJPY } from "@/lib/utils";
+import {
+  displayName,
+  displaySubtitle,
+  imageAlt,
+  kindLabel,
+} from "@/lib/product-display";
 
 type Params = Promise<{ slug: string }>;
 
@@ -29,9 +35,15 @@ export async function generateMetadata({
   const { slug } = await params;
   const product = await getProductBySlugWithInventory(slug);
   if (!product) return {};
+  const category = product.category;
+  const lengthNote =
+    category === "necklace" ? "長さは1cm単位で指定できます。" : "";
   return {
-    title: `${product.name} — ${product.subtitle}`,
-    description: product.description,
+    title: {
+      absolute: `${displayName(product.name)}｜${kindLabel(category)}｜740NLL`,
+    },
+    description:
+      `${product.description} ${formatJPY(product.price)}（税込）。送料は全国一律¥150。${lengthNote}`.trim(),
   };
 }
 
@@ -41,6 +53,7 @@ export default async function ProductPage({ params }: { params: Params }) {
   if (!product) notFound();
 
   const all = await listAllProductsWithInventory();
+  const name = displayName(product.name);
   const related = all
     .filter((p) => p.id !== product.id && p.category === product.category)
     .slice(0, 3);
@@ -49,10 +62,10 @@ export default async function ProductPage({ params }: { params: Params }) {
     <div className="mx-auto max-w-[1400px] px-6 py-12 md:px-10">
       <nav className="font-hand mb-10 flex items-center gap-2 text-[15px] text-muted-foreground">
         <Link href="/products" className="hover:text-foreground">
-          Shop
+          商品一覧
         </Link>
         <span>/</span>
-        <span className="text-foreground">{product.name}</span>
+        <span className="text-foreground">{name}</span>
       </nav>
 
       <div className="grid gap-12 md:grid-cols-2 md:gap-16">
@@ -77,7 +90,7 @@ export default async function ProductPage({ params }: { params: Params }) {
             />
             <Image
               src={product.image}
-              alt={product.imageAlt}
+              alt={imageAlt(product.name, product.category)}
               fill
               sizes="(min-width: 768px) 50vw, 100vw"
               className="object-cover"
@@ -98,7 +111,7 @@ export default async function ProductPage({ params }: { params: Params }) {
                 >
                   <Image
                     src={url}
-                    alt={`${product.imageAlt} ${i + 2}`}
+                    alt={imageAlt(product.name, product.category, `（写真${i + 2}）`)}
                     fill
                     sizes="(min-width: 768px) 16vw, 33vw"
                     className="object-cover"
@@ -118,19 +131,25 @@ export default async function ProductPage({ params }: { params: Params }) {
             className="font-marker text-3xl leading-none md:text-5xl"
             style={{ color: "var(--bead-blue)" }}
           >
-            {product.subtitle}
+            {displaySubtitle(product.name, product.subtitle)}
           </p>
           <h1 className="font-hand mt-5 text-[clamp(2.4rem,5.5vw,4.4rem)] font-semibold leading-[1.05] tracking-tight">
-            {product.name}
+            {name}
           </h1>
           <p
             className="font-marker mt-6 text-[34px] leading-none tabular-nums md:text-[40px]"
             style={{ color: "var(--bead-rust)" }}
           >
             {formatJPY(product.price)}
+            <span className="font-hand ml-1 text-[15px] text-muted-foreground">
+              （税込）
+            </span>
+          </p>
+          <p className="font-hand mt-3 text-[14px] text-muted-foreground">
+            {kindLabel(product.category)}
           </p>
 
-          <p className="font-hand mt-10 max-w-md text-[17px] leading-[1.95] text-foreground/85">
+          <p className="font-hand mt-8 max-w-md text-[17px] leading-[1.95] text-foreground/85">
             {product.description}
           </p>
 
@@ -170,9 +189,6 @@ export default async function ProductPage({ params }: { params: Params }) {
               category={product.category}
               disabled={!product.inStock}
             />
-            <p className="font-hand mt-4 text-[14px] text-muted-foreground">
-              送料 全国一律 ¥150
-            </p>
           </div>
         </div>
       </div>
@@ -183,7 +199,7 @@ export default async function ProductPage({ params }: { params: Params }) {
             className="font-marker text-4xl leading-none md:text-6xl"
             style={{ color: "var(--bead-olive)" }}
           >
-            You may also like
+            こちらのアクセサリーも
           </p>
           <div className="mt-12 grid grid-cols-2 gap-x-6 gap-y-16 md:grid-cols-3 md:gap-x-8">
             {related.map((p, i) => (

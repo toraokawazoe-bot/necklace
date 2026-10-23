@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-// カスタム長さ 33〜50cm に収まる首回りの範囲(ジャスト = 首回り+6cm)
+// カスタム長さ 33〜50cm に収まる首回りの範囲(首元に沿わせる目安 = 首回り+6cm)
 const NECK_MIN = 27;
 const NECK_MAX = 44;
 const NECK_PRESETS = [30, 33, 36, 39];
@@ -45,17 +45,17 @@ export function SizeGuide({
                 className="font-marker text-[22px] leading-[1.25] sm:text-[26px]"
                 style={{ color: "var(--bead-olive)" }}
               >
-                ジャストサイズは「首回り ＋6cm」
+                自分に合う長さを選ぶ
               </p>
               <p className="font-hand mt-2.5 text-[15px] leading-[1.85] text-foreground/85">
-                メジャーがなくても大丈夫。首回りのかんたんな測り方と、
-                あなたの首回りからジャスト／ゆったりサイズがすぐわかる早見表。
+                首回りを測って、好みの着け心地に合う長さを探せます。
+                ネックレスは1cm単位のカスタムも同価格で承ります。
               </p>
               <p
                 className="font-marker mt-3.5 inline-flex items-center gap-1 text-[17px] underline-offset-4 transition-opacity group-hover:opacity-70"
                 style={{ color: "var(--bead-rust)" }}
               >
-                サイズの選び方を見る →
+                ネックレスのサイズの選び方 →
               </p>
             </div>
           </div>
@@ -121,10 +121,8 @@ export function SizeGuide({
             迷ったら
           </p>
           <p className="font-hand mt-2 text-[15px] leading-[1.8] text-foreground/85">
-            全てアジャスター付きで ±2cm 調整できるので、迷ったら
-            <strong>少し長め（ゆったり寄り）</strong>がおすすめ（詰めて短くも使えます）。
-            ジャストにしたい方は、サイズ選択の「カスタム」から
-            1cm単位・同価格で指定できます。相談したい方は Instagram DM へどうぞ。
+            普段使っているネックレスの長さも参考にしてみてください。
+            サイズについては Instagram の DM でもご相談いただけます。
           </p>
         </section>
       </div>
@@ -150,13 +148,17 @@ export function SizeGuideContent() {
         className="font-marker text-[17px] leading-none"
         style={{ color: "var(--bead-rust)" }}
       >
-        基準はひとつだけ
+        自分に合う長さを選ぶ
       </p>
       <p className="font-hand mt-2 text-[15px] leading-[1.8] text-foreground/85">
-        ジャストサイズ＝<strong>首回り ＋6cm</strong>。
-        ゆったり着けたい方は <strong>＋8〜10cm</strong> が目安です。
+        まずは首回りを測って、好みの着け心地に合わせて長さを選びましょう。
+        首元に沿わせたい方は<strong>「首回り＋6cm」</strong>、
+        少しゆとりを持たせたい方は<strong>「首回り＋8〜10cm」</strong>が目安です。
         <span className="mt-1 block text-[13.5px] text-muted-foreground">
-          例：首回り30cmなら → ジャスト36cm／ゆったり38〜40cm
+          着用位置は首の形や体格によって変わります。数値は選ぶときの目安としてご覧ください。
+        </span>
+        <span className="mt-1 block text-[13.5px] text-muted-foreground">
+          例：首回りが33cmの場合、首元に沿わせるなら39cm、ゆとりを持たせるなら41〜43cmが目安です。
         </span>
       </p>
     </section>
@@ -172,34 +174,33 @@ export function SizeGuideContent() {
         className="font-marker text-[17px] leading-none"
         style={{ color: "var(--bead-blue)" }}
       >
-        メジャーがなくても測れます
+        首回りの測り方
       </p>
       <ol className="font-hand mt-3 space-y-2 text-[15px] leading-[1.8] text-foreground/85">
         <li className="flex gap-2">
           <span style={{ color: "var(--bead-brown)" }}>1.</span>
           <span>
-            測る場所は<strong>首の真ん中（喉仏の下あたり）</strong>。
-            ここをぐるっと一周した長さが「首回り」です
+            首の真ん中あたりにメジャーを一周させます。
+            締めつけず、肌に沿わせて測ってください
           </span>
         </li>
         <li className="flex gap-2">
           <span style={{ color: "var(--bead-brown)" }}>2.</span>
           <span>
-            メジャーがあれば、首の真ん中にゆるくひと巻きして測ります
+            メジャーがない場合は、伸びにくいひもや細い紙を一周させ、重なる位置に印をつけます
           </span>
         </li>
         <li className="flex gap-2">
           <span style={{ color: "var(--bead-brown)" }}>3.</span>
           <span>
-            なければ紐や充電ケーブルをひと巻きして、
-            重なったところを指でつまみ、定規にあてて長さを測ります
+            ひもや紙をまっすぐにして、印までの長さを定規で測ります
           </span>
         </li>
         <li className="flex gap-2">
           <span style={{ color: "var(--bead-brown)" }}>4.</span>
           <span>
-            首回りに <strong>＋6cm でジャストサイズ</strong>、
-            <strong>＋8〜10cm でゆったり鎖骨ライン</strong>が目安です
+            首回りに <strong>＋6cm で首元に沿わせる長さ</strong>、
+            <strong>＋8〜10cm でゆとりを持たせる長さ</strong>が目安です
           </span>
         </li>
       </ol>
@@ -211,11 +212,11 @@ export function SizeGuideContent() {
         className="font-marker text-[17px] leading-none"
         style={{ color: "var(--bead-blue)" }}
       >
-        あなたのサイズを出してみる
+        首回りから長さの目安を出す
       </p>
       <div className="mt-3 rounded-xl border border-border px-4 py-4">
         <p className="font-hand text-[13px] text-muted-foreground">
-          首回り
+          首回りを入力
         </p>
         <div className="mt-1.5 flex flex-wrap items-center gap-3">
           <button
@@ -272,7 +273,7 @@ export function SizeGuideContent() {
               className="font-hand text-[12px]"
               style={{ color: "var(--bead-blue)" }}
             >
-              ジャストサイズ（＋6cm）
+              首元に沿わせる目安（＋6cm）
             </p>
             <p className="font-marker mt-1 text-[24px] leading-none">
               {just}cm
@@ -286,7 +287,7 @@ export function SizeGuideContent() {
               className="font-hand text-[12px]"
               style={{ color: "var(--bead-rust)" }}
             >
-              ゆったり（＋8〜10cm）
+              ゆとりを持たせる目安（＋8〜10cm）
             </p>
             <p className="font-marker mt-1 text-[24px] leading-none">
               {loose[0]}〜{loose[1]}cm
@@ -295,8 +296,8 @@ export function SizeGuideContent() {
         </div>
         <p className="font-hand mt-3 text-[13px] leading-[1.7] text-muted-foreground">
           {just === 38 || just === 41
-            ? `既製サイズの ${just}cm がそのままジャストです。`
-            : `サイズ選択の「カスタム」から ${just}cm を1cm単位・同価格で指定できます。`}
+            ? `選べる長さの ${just}cm が、首元に沿わせる目安に当たります。`
+            : `サイズ選択の「好きな長さを指定する」から ${just}cm を1cm単位・同価格で指定できます。`}
         </p>
       </div>
     </section>
@@ -313,13 +314,13 @@ export function SizeGuideContent() {
         <thead>
           <tr className="border-b border-border text-[13px] text-muted-foreground">
             <th className="py-2 font-normal">首回り</th>
-            <th className="py-2 font-normal">ジャスト（＋6cm）</th>
-            <th className="py-2 font-normal">ゆったり（＋8〜10cm）</th>
+            <th className="py-2 font-normal">首元に沿わせる目安</th>
+            <th className="py-2 font-normal">ゆとりを持たせる目安</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
           <tr>
-            <td className="py-2.5">30cm（細め）</td>
+            <td className="py-2.5">30cm</td>
             <td className="py-2.5 font-semibold">36cm</td>
             <td className="py-2.5">38〜40cm</td>
           </tr>
@@ -329,20 +330,25 @@ export function SizeGuideContent() {
             <td className="py-2.5">40〜42cm</td>
           </tr>
           <tr>
+            <td className="py-2.5">33cm</td>
+            <td className="py-2.5 font-semibold">39cm</td>
+            <td className="py-2.5">41〜43cm</td>
+          </tr>
+          <tr>
             <td className="py-2.5">35cm</td>
             <td className="py-2.5 font-semibold">41cm</td>
             <td className="py-2.5">43〜45cm</td>
           </tr>
           <tr>
-            <td className="py-2.5">39cm（しっかりめ）</td>
+            <td className="py-2.5">39cm</td>
             <td className="py-2.5 font-semibold">45cm</td>
             <td className="py-2.5">47〜49cm</td>
           </tr>
         </tbody>
       </table>
       <p className="font-hand mt-2 text-[13px] leading-[1.7] text-muted-foreground">
-        首回り32cm前後なら既製の38cm、35cm前後なら41cmがジャスト。
-        男性の方など首回りがしっかりめの方は、45cm前後をカスタムで指定するのがおすすめです。
+        希望の長さは、商品ページの「好きな長さを指定する」から1cm単位で選べます。カスタムも同価格です。
+        迷ったときは、普段使っているネックレスの長さも参考にしてみてください。
       </p>
     </section>
     </>
@@ -355,7 +361,7 @@ function NeckIllustration() {
     <svg
       viewBox="0 0 320 180"
       role="img"
-      aria-label="首回り+6cmは首元にフィット、+8〜10cmは鎖骨ラインに落ちるイラスト"
+      aria-label="首回り+6cmと+8〜10cmで、ネックレスが落ちる位置の違いを示すイラスト"
       className="mx-auto block w-full max-w-[320px]"
     >
       {/* 顔の輪郭(あご) */}
@@ -507,7 +513,7 @@ function NeckIllustration() {
         fill="var(--bead-blue)"
         className="font-hand"
       >
-        ジャストサイズ
+        首元に沿わせる
       </text>
 
       <line
@@ -536,7 +542,7 @@ function NeckIllustration() {
         fill="var(--bead-rust)"
         className="font-hand"
       >
-        ゆったり鎖骨ライン
+        ゆとりを持たせる
       </text>
     </svg>
   );

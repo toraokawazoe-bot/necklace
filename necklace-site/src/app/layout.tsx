@@ -48,11 +48,11 @@ const crayon = localFont({
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.740nll.store"),
   title: {
-    default: "740NLL — Handmade beaded chokers",
+    default: "740NLL｜手編みのビーズネックレス・ブレスレット",
     template: "%s · 740NLL",
   },
   description:
-    "一点ずつ手で編むビーズチョーカー。Tシャツの首元にちょうど効く、控えめな一本を。",
+    "740NLLのビーズネックレスとブレスレット。ひとつずつ手で編んでいます。ネックレスは¥2,500、ブレスレットは¥1,700。全国一律送料¥150。",
 };
 
 export default function RootLayout({

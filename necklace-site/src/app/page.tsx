@@ -28,14 +28,24 @@ export default function Home() {
 
       {/* BOTTOM-RIGHT — handwritten note */}
       <span className="font-hand absolute bottom-6 right-6 text-[13px] text-foreground/75 md:bottom-8 md:right-10 md:text-[14px]">
-        in Tokyo
+        one by one
       </span>
+
+      {/* メインコピー */}
+      <div className="pointer-events-none absolute inset-x-0 top-[5.6rem] z-10 px-6 text-center md:top-[6.2rem]">
+        <h1 className="font-hand text-[14px] font-semibold leading-snug text-foreground md:text-[17px]">
+          手編みのビーズアクセサリー
+        </h1>
+        <p className="font-hand mt-0.5 text-[12px] leading-snug text-foreground/70 md:text-[14px]">
+          ビーズネックレスとブレスレットを作っています。
+        </p>
+      </div>
 
       {/* TOP-CENTER — SHOP */}
       <Link
         href="/products"
         className="group absolute left-1/2 top-5 inline-flex -translate-x-1/2 flex-col items-center gap-0.5 leading-none md:top-8"
-        aria-label="Shop"
+        aria-label="アクセサリーを見る"
         style={{ color: "var(--bead-blue)" }}
       >
         <span className="font-hand text-xl font-semibold leading-none opacity-70 transition-opacity group-hover:opacity-100 md:text-2xl">
@@ -52,7 +62,7 @@ export default function Home() {
         target="_blank"
         rel="noopener noreferrer"
         className="group absolute left-4 top-1/2 -translate-y-1/2 md:left-10"
-        aria-label="Instagram"
+        aria-label="Instagram（新しいタブで開きます）"
         style={{ color: "var(--bead-rust)" }}
       >
         <span className="font-marker block rotate-180 text-3xl transition-transform group-hover:translate-x-0.5 [writing-mode:vertical-rl] md:text-4xl">
@@ -63,6 +73,7 @@ export default function Home() {
       {/* MIDDLE-RIGHT — ABOUT (vertical) */}
       <Link
         href="/about"
+        aria-label="ブランドについて"
         className="group absolute right-10 top-1/2 -translate-y-1/2 md:right-20"
         style={{ color: "var(--bead-brown)" }}
       >
@@ -75,7 +86,7 @@ export default function Home() {
       <Link
         href="/care"
         className="group absolute bottom-5 left-1/2 inline-flex -translate-x-1/2 flex-col items-center gap-0.5 leading-none md:bottom-8"
-        aria-label="Care"
+        aria-label="お手入れ"
         style={{ color: "var(--bead-olive)" }}
       >
         <span className="font-marker text-4xl leading-none transition-transform group-hover:translate-y-0.5 md:text-5xl">

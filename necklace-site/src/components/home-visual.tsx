@@ -63,7 +63,7 @@ const Squiggle = ({
 );
 
 const MARQUEE_TEXT =
-  "Handmade in Tokyo · 一点ずつ手で編む · ¥2,500 each · 送料一律 ¥150 · One at a time · ";
+  "ひとつずつ手編み · ネックレス ¥2,500（税込） · ブレスレット ¥1,700（税込） · 全国一律送料 ¥150 · ";
 
 export function HomeVisual() {
   const [revealed, setRevealed] = useState(false);
@@ -86,7 +86,7 @@ export function HomeVisual() {
           />
           <Image
             src="/illustrations/main-desktop.png"
-            alt="ビーズチョーカーを着けた3人のイラスト"
+            alt="ビーズのアクセサリーを着けた3人のイラスト"
             fill
             priority
             sizes="82vw"
@@ -113,7 +113,7 @@ export function HomeVisual() {
           />
           <Image
             src="/illustrations/main-mobile.png"
-            alt="ビーズチョーカーを着けた3人のイラスト"
+            alt="ビーズのアクセサリーを着けた3人のイラスト"
             fill
             priority
             sizes="82vw"
@@ -169,7 +169,12 @@ export function HomeVisual() {
 
       {/* Bottom marquee strip — handwriting tagline */}
       <div className="deco-fade-in pointer-events-none absolute inset-x-0 bottom-0 z-0 overflow-hidden">
-        <div className="font-hand animate-marquee inline-block whitespace-nowrap text-[11px] text-foreground/55">
+        <p className="sr-only">
+          ひとつずつ手編み。ネックレス ¥2,500（税込）、ブレスレット ¥1,700（税込）、全国一律送料 ¥150。
+        </p>
+        <div
+          aria-hidden
+          className="font-hand animate-marquee inline-block whitespace-nowrap text-[11px] text-foreground/55">
           {MARQUEE_TEXT.repeat(6)}
         </div>
       </div>

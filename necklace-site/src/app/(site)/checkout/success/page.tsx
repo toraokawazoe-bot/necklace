@@ -52,11 +52,12 @@ export default async function SuccessPage({
         Order confirmed
       </p>
       <h1 className="font-hand mt-6 text-4xl md:text-5xl">
-        ありがとうございました。
+        ご注文ありがとうございます。
       </h1>
       <p className="font-hand mt-8 max-w-md text-[16px] leading-[1.85] text-muted-foreground">
-        ご注文を承りました。
-        {customerEmail ? `${customerEmail} 宛に確認メールをお送りしました。` : "確認メールをお送りしました。"}
+        {customerEmail ? `ご注文内容を記載したメールを ${customerEmail} 宛にお送りしました。` : "ご注文内容を記載したメールをお送りしました。"}
+        <br />
+        発送は、ご注文・ご入金の確認後、通常3〜7営業日以内です。
       </p>
       {amountTotal !== null && (
         <p className="mt-4 text-[13px] tabular-nums text-muted-foreground">
@@ -89,7 +90,7 @@ export default async function SuccessPage({
       )}
       <div className="mt-10 flex gap-3">
         <Link href="/products">
-          <Button variant="outline">買い物を続ける</Button>
+          <Button variant="outline">お買い物を続ける</Button>
         </Link>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "プライバシーポリシー",
+  title: { absolute: "プライバシーポリシー｜740NLL" },
 };
 
 const SECTIONS: { title: string; body: React.ReactNode }[] = [
@@ -97,7 +97,7 @@ export default function PrivacyPage() {
         プライバシーポリシー
       </h1>
       <p className="font-hand mt-6 text-[15px] leading-[1.85] text-foreground/80">
-        740NLL（以下「当サイト」）は、お客様の個人情報を以下の方針で取り扱います。
+        740NLL（以下「当サイト」）は、お客様の個人情報を、以下の方針に沿って取り扱います。
       </p>
 
       <div className="mt-12 space-y-9">

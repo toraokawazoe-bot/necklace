@@ -17,7 +17,7 @@ export function AddToCartButton({
   if (disabled) {
     return (
       <Button size="lg" variant="outline" disabled className="w-full">
-        Sold out
+        売り切れ
       </Button>
     );
   }

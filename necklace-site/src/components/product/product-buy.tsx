@@ -17,8 +17,8 @@ import {
 } from "@/lib/product-category";
 
 const SIZE_OPTIONS = [
-  { cm: 38, label: "首元にフィット", note: "Tシャツの襟ぐりと同じ高さ・女性に多いサイズ" },
-  { cm: 41, label: "鎖骨ライン", note: "ゆったり下がる・男性に多いサイズ" },
+  { cm: 38, label: "短めの長さ", note: "首元に沿いやすい長さ" },
+  { cm: 41, label: "やや長めの長さ", note: "少しゆとりのある長さ" },
 ];
 
 // カスタム長さの範囲(チェックアウトAPI側のバリデーションと合わせる。定義は lib/product-category.ts)
@@ -66,7 +66,7 @@ export function ProductBuy({
             className="font-marker text-[20px] leading-none md:text-[22px]"
             style={{ color: "var(--bead-olive)" }}
           >
-            サイズを選ぶ
+            長さを選ぶ
           </p>
           <div className="mt-3 grid grid-cols-4 gap-2.5">
             {BRACELET_SIZES.map((cm) => (
@@ -108,7 +108,7 @@ export function ProductBuy({
             className="font-marker text-[20px] leading-none md:text-[22px]"
             style={{ color: "var(--bead-olive)" }}
           >
-            サイズを選ぶ
+            長さを選ぶ
           </p>
           <SizeGuide />
         </div>
@@ -166,10 +166,10 @@ export function ProductBuy({
             )}
           >
             <span className="font-marker text-[20px] leading-none">
-              カスタム
+              好きな長さを指定する
             </span>
             <span className="font-hand text-[13px] leading-tight opacity-75">
-              1cm単位で好きな長さに・同価格
+              1cm単位・同価格
             </span>
             {isCustom && (
               <span className="ml-auto flex items-center gap-1.5">
@@ -194,11 +194,12 @@ export function ProductBuy({
         </div>
         {isCustom && (
           <p className="font-hand mt-2 text-[12px] leading-[1.6] text-muted-foreground">
-            目安: 首回り +5cm で首元フィット、+8cm で鎖骨ライン
+            目安: 首回り +6cm で首元に沿わせる長さ、+8〜10cm でゆとりのある長さ
           </p>
         )}
         <p className="font-hand mt-3 text-[12px] leading-[1.6] text-muted-foreground">
-          すべてアジャスター付き。±2cm 程度の調整ができます。
+          ネックレスは1cm単位で長さを指定できます。カスタムも同価格です。
+          すべてアジャスター付きで、±2cm 程度の調整ができます。
         </p>
       </div>
       )}
@@ -206,7 +207,7 @@ export function ProductBuy({
       <div className="mt-6">
         {disabled ? (
           <Button size="lg" variant="outline" disabled className="w-full">
-            Sold out
+            売り切れ
           </Button>
         ) : (
           <Button
@@ -216,42 +217,55 @@ export function ProductBuy({
             className="w-full"
           >
             {adding
-              ? "Added —"
+              ? "カートに追加しました。"
               : effectiveLabel
-                ? `カートに入れる ・ ${effectiveLabel}`
+                ? `カートに入れる｜${effectiveLabel}`
                 : "カートに入れる"}
           </Button>
         )}
       </div>
 
-      {category !== "glasses-chain" && (
-      <div className="mt-8 border-t border-border pt-6">
-        <p
-          className="font-marker text-[20px] leading-none md:text-[22px]"
-          style={{ color: "var(--bead-rust)" }}
-        >
-          どの長さがいいか迷ったら
-        </p>
-        <p className="font-hand mt-3 text-[15px] leading-[1.85] text-foreground/85">
-          {category === "necklace" && (
-            <>
-              好きな長さは上の「カスタム」から 1cm 単位で指定できます。
-              <br />
-            </>
-          )}
-          測り方がわからない・相談したい方はお気軽に DM へどうぞ。
-        </p>
-        <a
-          href="https://ig.me/m/740nll"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-marker mt-3 inline-flex items-center gap-2 text-[18px] underline-offset-4 transition-opacity hover:opacity-75"
-          style={{ color: "var(--bead-rust)" }}
-        >
-          Instagram DM で相談する →
-        </a>
+      <div className="font-hand mt-4 space-y-1 text-[14px] leading-[1.8] text-muted-foreground">
+        <p>送料：全国一律 ¥150</p>
+        <p>発送：ご注文・ご入金の確認後、通常3〜7営業日以内</p>
+        <p>受注制作などで通常よりお時間をいただく場合は、事前にメールでご連絡します。</p>
       </div>
+
+      <div className="mt-8 border-t border-border pt-6">
+        <p className="font-hand text-[15px] leading-[1.85] text-foreground/85">
+          ひとつずつ手で編んでいるため、ビーズの並びや色合いには少しずつ違いがあります。
+        </p>
+      </div>
+
+      {category !== "glasses-chain" && (
+        <div className="mt-6">
+          <p className="font-hand text-[15px] leading-[1.85] text-foreground/85">
+            長さの選び方に迷ったら、InstagramのDMでご相談ください。
+          </p>
+          <a
+            href="https://ig.me/m/740nll"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-marker mt-2 inline-flex min-h-11 items-center gap-2 text-[18px] underline-offset-4 transition-opacity hover:opacity-75"
+            style={{ color: "var(--bead-rust)" }}
+          >
+            サイズについて相談する →
+          </a>
+        </div>
       )}
+
+      <div className="mt-6">
+        <p className="font-hand text-[15px] leading-[1.85] text-foreground/85">
+          お手入れと保管方法はこちらをご確認ください。
+        </p>
+        <Link
+          href="/care"
+          className="font-marker mt-2 inline-flex min-h-11 items-center gap-2 text-[18px] underline-offset-4 transition-opacity hover:opacity-75"
+          style={{ color: "var(--bead-olive)" }}
+        >
+          お手入れの方法を見る →
+        </Link>
+      </div>
     </div>
   );
 }
