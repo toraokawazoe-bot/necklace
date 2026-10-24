@@ -9,6 +9,7 @@ import type { Product } from "@/lib/products";
 import { Button } from "@/components/ui/button";
 import { formatJPY } from "@/lib/utils";
 import { readFirstRef } from "@/lib/first-ref";
+import { classifyUserAgent } from "@/lib/abandoned-core";
 import { displayName, displaySubtitle, imageAlt } from "@/lib/product-display";
 
 // 送料(全国一律)。チェックアウトAPI(shipping_options)の金額と合わせる。
@@ -22,6 +23,9 @@ export function CartDrawer() {
   // 決済ページへ移動中。Stripe から戻る(bfcache 復元)時は pageshow で解除する。
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Instagram・Threads 等のアプリ内ブラウザか(決済の案内を出すため)
+  const [inAppApp, setInAppApp] = useState<string | null>(null);
+  const [urlCopied, setUrlCopied] = useState(false);
   // クーポン: 入力中の文字と、サーバーで確認できた適用結果
   const [couponInput, setCouponInput] = useState("");
   const [couponBusy, setCouponBusy] = useState(false);
@@ -34,6 +38,8 @@ export function CartDrawer() {
 
   useEffect(() => {
     setMounted(true);
+    const d = classifyUserAgent(navigator.userAgent);
+    if (d.inApp) setInAppApp(d.app);
     fetch("/api/products")
       .then((res) => res.json())
       .then((data: { products?: Product[] }) => {
@@ -127,6 +133,16 @@ export function CartDrawer() {
     }
   };
 
+  const copyUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setUrlCopied(true);
+      window.setTimeout(() => setUrlCopied(false), 3000);
+    } catch {
+      setError("URLをコピーできませんでした。画面右上のメニューからブラウザで開いてください。");
+    }
+  };
+
   const handleCheckout = () => {
     setError(null);
     if (cartItems.length === 0) {
@@ -150,6 +166,8 @@ export function CartDrawer() {
               qty: line.qty,
             })),
             ...(coupon ? { couponCode: coupon.code } : {}),
+            ...(inAppApp ? { inAppNotice: true } : {}),
+            ...(inAppApp ? { inAppNotice: true } : {}),
             ...(readFirstRef() ? { ref: readFirstRef() } : {}),
           }),
         });
@@ -404,6 +422,23 @@ export function CartDrawer() {
               <p className="mt-3 text-xs text-red-700" role="alert">
                 {error}
               </p>
+            )}
+            {inAppApp && (
+              <div className="mt-4 border border-border px-3 py-3" role="note">
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {inAppApp === "Instagram" || inAppApp === "Threads"
+                    ? "Instagram・Threadsのアプリ内ブラウザでは、PayPayの画面に移れないことがあります。"
+                    : "アプリ内ブラウザでは、PayPayの画面に移れないことがあります。"}
+                  右上のメニューから『ブラウザで開く』を選ぶと、スムーズにお支払いいただけます。
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void copyUrl()}
+                  className="mt-1 min-h-11 text-xs underline underline-offset-4"
+                >
+                  {urlCopied ? "コピーしました" : "URLをコピー"}
+                </button>
+              </div>
             )}
             <Button
               className="mt-4 w-full"

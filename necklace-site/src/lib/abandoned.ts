@@ -45,6 +45,7 @@ export async function recordCheckoutStarted(input: {
   session: Stripe.Checkout.Session;
   device: AbandonedRecord["device"];
   referrer: string | undefined;
+  inAppNoticeShown?: boolean;
   productNames: Record<string, string>;
 }): Promise<void> {
   const s = input.session;
@@ -55,6 +56,7 @@ export async function recordCheckoutStarted(input: {
   rec.cardOnlyInferred = false;
   rec.device = input.device;
   if (input.referrer) rec.referrer = input.referrer;
+  if (input.inAppNoticeShown) rec.inAppNoticeShown = true;
   await putAbandoned(rec);
 }
 
@@ -130,7 +132,7 @@ export async function appendFailedAttempt(intent: Stripe.PaymentIntent): Promise
       ok: false,
       code,
       message: e.message ?? null,
-      reasonJa: reasonJa(code, e.message ?? null),
+      reasonJa: reasonJa(code, e.message ?? null, e.payment_method?.type ?? null),
       riskLevel: null,
       outcomeType: null,
       cardBrand: e.payment_method?.card?.brand ?? null,

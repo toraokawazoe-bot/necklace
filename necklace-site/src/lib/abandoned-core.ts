@@ -67,6 +67,8 @@ export type AbandonedRecord = {
   // 自前の計測(作成時のみ)
   device?: DeviceInfo;
   referrer?: string; // 最初の流入元(例: l.threads.com)
+  // アプリ内ブラウザ向けの案内をカートで表示したか(購入手続きへ進む時点の記録)
+  inAppNoticeShown?: boolean;
   source: "live" | "backfill";
   updatedAt: number;
 };
@@ -179,11 +181,45 @@ const REASON_JA: Record<string, string> = {
   amount_too_large: "金額が大きすぎる",
   amount_too_small: "金額が小さすぎる",
   email_invalid: "メールアドレスが不正",
+  // 追加分(Stripe でよく出るコード)
+  payment_intent_payment_attempt_expired: "支払いの手続きが時間内に完了しませんでした",
+  lost_or_stolen_card: "紛失・盗難カードとして拒否",
+  invalid_account: "カードまたは口座が無効",
+  invalid_amount: "金額がカードで扱えない",
+  issuer_not_available: "カード会社に接続できなかった",
+  new_account_information_available: "カード情報が更新されている(再入力が必要)",
+  no_action_taken: "カード会社が処理しなかった",
+  offline_pin_required: "暗証番号の入力が必要なカード",
+  reenter_transaction: "カード会社に再試行を求められた",
+  security_violation: "セキュリティ違反としてカード会社が拒否",
+  service_not_allowed: "このカードではこのサービスを使えない",
+  stop_payment_order: "カード会社が支払いを停止",
+  transaction_not_allowed: "このカードでは許可されていない取引",
+  card_not_supported_for_payment: "このカードは対応外",
+  incorrect_pin: "暗証番号が違う",
+  invalid_pin: "暗証番号が違う",
+  pin_try_exceeded: "暗証番号の入力回数の上限超過",
+  invalid_expiry: "有効期限が違う",
+  expired_card_declined: "カードの有効期限切れ",
+  authentication_not_handled: "本人認証が完了しなかった",
+  payment_intent_authentication_failure_unhandled: "3Dセキュア(本人認証)に失敗・中断",
+  card_decline_rate_limit_exceeded: "短時間に拒否が続き、制限がかかった",
+  payment_method_invalid_parameter: "支払方法の入力内容が不正",
+  payment_intent_incompatible_payment_method: "選ばれた支払方法ではこの決済を扱えない",
+  setup_intent_authentication_failure: "本人認証に失敗・中断",
   // Radar
   blocked: "Stripeの不正検知(Radar)がブロック",
 };
 
-export function reasonJa(code: string | null, message: string | null): string {
+export function reasonJa(
+  code: string | null,
+  message: string | null,
+  method?: string | null,
+): string {
+  // 同じコードでも、PayPay では「アプリに移ったあと払い切れなかった」という意味になる
+  if (code === "payment_intent_payment_attempt_expired" && method === "paypay") {
+    return "PayPayに移ったあと、時間内に支払いが完了しませんでした";
+  }
   if (code && REASON_JA[code]) return REASON_JA[code];
   if (code) return `${code}(未翻訳のコード)`;
   if (message) return message;
@@ -272,7 +308,7 @@ function attemptFromCharge(c: Stripe.Charge): PayAttempt {
     reasonJa:
       c.status === "succeeded"
         ? "成功"
-        : reasonJa(finalCode, c.failure_message ?? out?.seller_message ?? null),
+        : reasonJa(finalCode, c.failure_message ?? out?.seller_message ?? null, method),
     riskLevel: out?.risk_level ?? null,
     outcomeType: out?.type ?? null,
     cardBrand: card?.brand ?? null,
@@ -295,7 +331,7 @@ function attemptFromPaymentError(
     ok: false,
     code,
     message: e.message ?? null,
-    reasonJa: reasonJa(code, e.message ?? null),
+    reasonJa: reasonJa(code, e.message ?? null, e.payment_method?.type ?? method),
     riskLevel: null,
     outcomeType: null,
     cardBrand: e.payment_method?.card?.brand ?? null,

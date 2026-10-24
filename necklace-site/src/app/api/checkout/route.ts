@@ -25,6 +25,7 @@ type CheckoutRequest = {
   couponCode?: string;
   // 最初に来た時の流入元(ホスト名だけ。例: l.threads.com)。止まった決済の分析用。
   ref?: string;
+  inAppNotice?: boolean;
 };
 
 // 長さの検証ルールはカテゴリごとに lib/product-category.ts にある
@@ -227,7 +228,7 @@ export async function POST(req: Request) {
     shipping_address_collection: {
       allowed_countries: ["JP"],
     },
-    phone_number_collection: { enabled: true },
+    // 電話番号は集めない(Checkout には「任意」にする設定が無い。発送はクリックポストで電話番号は不要)。
     shipping_options: [
       {
         shipping_rate_data: {
@@ -288,6 +289,7 @@ export async function POST(req: Request) {
         session,
         device: classifyUserAgent(req.headers.get("user-agent")),
         referrer: /^[A-Za-z0-9().:_-]+$/.test(rawRef) ? rawRef : undefined,
+        inAppNoticeShown: body.inAppNotice === true,
         productNames,
       });
     } catch (e) {
