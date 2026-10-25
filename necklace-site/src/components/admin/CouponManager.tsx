@@ -153,7 +153,7 @@ export function CouponManager({
     }
   }
 
-  async function useByOrder(c: Coupon) {
+  async function redeemByOrder(c: Coupon) {
     if (!window.confirm(`${c.code} をオーダーで使用済みにします。元に戻せません。`)) return;
     setUsing(true);
     setSearchMsg(null);
@@ -249,7 +249,7 @@ export function CouponManager({
             {found.status === "unused" ? (
               <button
                 type="button"
-                onClick={() => useByOrder(found)}
+                onClick={() => redeemByOrder(found)}
                 disabled={using}
                 className="mt-4 min-h-14 w-full rounded-full bg-foreground px-6 text-base font-medium text-background transition hover:opacity-90 disabled:opacity-50"
               >
