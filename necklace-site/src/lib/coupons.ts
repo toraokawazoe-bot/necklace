@@ -17,7 +17,9 @@ import {
 //    商品ごとの制限ができない(Checkout の line_items が price_data のその場作成のため)。
 //  - 「未使用 → 予約中 → 使用済み」の状態を、Lua を使わず SET NX だけで原子的に動かす:
 //      lock キー  : SET NX EX で取れた 1 人だけが予約できる(期限が来れば自然に未使用へ戻る)
-//      used キー  : SET NX。支払い確定 Webhook だけが付ける
+//      used キー  : SET NX。付けるのは次の 2 つだけ。
+//                   ・支払い確定 Webhook(via: "ec")
+//                   ・管理画面の「オーダーで使用済みにする」(via: "order")。lock を取った人だけが付ける
 //      off キー   : 管理画面の無効化
 //    レコード本体(rec)は発行時に作ったら書き換えない。状態はこの 3 キーから導く。
 //  - Stripe には注文ごとの amount_off の Coupon(1 回限り)を作って渡すだけ。
@@ -105,6 +107,10 @@ async function putRecord(rec: CouponRecord): Promise<boolean> {
   return created !== null;
 }
 
+// used キーの中身。via が無い古い記録(sessionId だけ)は EC 扱い。
+type UsedRecord = { via?: "ec" | "order"; sessionId?: string; at?: number; by?: string };
+export type CouponUsedVia = "ec" | "order";
+
 export type CouponStatus = "unused" | "reserved" | "used" | "disabled";
 
 export type CouponView = {
@@ -118,11 +124,13 @@ export type CouponView = {
   createdAt: number;
   status: CouponStatus;
   redeemedAt: number | null;
+  usedVia: CouponUsedVia | null;
+  usedBy: string | null;
 };
 
 function toView(
   rec: CouponRecord,
-  used: { at?: number } | null,
+  used: UsedRecord | null,
   off: boolean,
   locked: boolean,
 ): CouponView {
@@ -137,6 +145,8 @@ function toView(
     createdAt: rec.createdAt,
     status: used ? "used" : off ? "disabled" : locked ? "reserved" : "unused",
     redeemedAt: used?.at ?? null,
+    usedVia: used ? (used.via === "order" ? "order" : "ec") : null,
+    usedBy: used?.by ?? null,
   };
 }
 
@@ -149,7 +159,7 @@ export async function getCouponView(code: string): Promise<CouponView | null> {
     redis.get(offKey(code)),
     redis.get(lockKey(code)),
   ]);
-  return toView(rec, parseJson<{ at?: number }>(used), off != null, lock != null);
+  return toView(rec, parseJson<UsedRecord>(used), off != null, lock != null);
 }
 
 // ---------------------------------------------------------------------------
@@ -355,11 +365,48 @@ export async function releaseCoupon(code: string, token: string): Promise<boolea
   return true;
 }
 
-// 支払い確定。予約が切れていても、お金が動いた以上は使用済みにする。何度呼んでも同じ。
+// 管理画面から「オーダー(Instagram DM)で使用済みにする」。
+// EC の予約(reserveCoupon)と同じ lock キーを SET NX で取り合うので、決済の手続き中とは両立しない。
+//  - 先に EC が lock を取った → こちらは "reserved" で断る
+//  - 先にこちらが lock を取った → EC の reserveCoupon は "reserved"、取った後の再確認でも used を見て弾く
+// lock は短い寿命(60 秒)で、used を付けたら外す。途中で落ちても自然に未使用へ戻る。
+export type OrderUseResult = "ok" | "not_found" | "used" | "disabled" | "reserved";
+
+export async function markCouponUsedByOrder(code: string, by: string): Promise<OrderUseResult> {
+  const redis = requireRedis();
+  const rec = await getRecord(code);
+  if (!rec) return "not_found";
+  const blocked = async (): Promise<"used" | "disabled" | null> => {
+    const [used, off] = await Promise.all([redis.get(usedKey(code)), redis.get(offKey(code))]);
+    return used != null ? "used" : off != null ? "disabled" : null;
+  };
+  const pre = await blocked();
+  if (pre) return pre;
+  const token = `order:${randomInt(1_000_000_000)}`;
+  const got = await redis.set(lockKey(code), token, { nx: true, ex: 60 });
+  if (got === null) return "reserved";
+  try {
+    const post = await blocked();
+    if (post) return post;
+    const set = await redis.set(
+      usedKey(code),
+      JSON.stringify({ via: "order", at: Date.now(), by: by.slice(0, 100) } satisfies UsedRecord),
+      { nx: true },
+    );
+    return set === null ? "used" : "ok";
+  } finally {
+    // 自分の lock のときだけ外す
+    if ((await redis.get<string>(lockKey(code))) === token) await redis.del(lockKey(code));
+  }
+}
+
+// 支払い確定(Webhook)。予約が切れていても、お金が動いた以上は使用済みにする。何度呼んでも同じ。
 export async function markCouponUsed(code: string, sessionId: string): Promise<void> {
   const redis = getRedis();
   if (!redis) return;
-  await redis.set(usedKey(code), JSON.stringify({ sessionId, at: Date.now() }), { nx: true });
+  await redis.set(usedKey(code), JSON.stringify({ via: "ec", sessionId, at: Date.now() } satisfies UsedRecord), {
+    nx: true,
+  });
   await redis.del(lockKey(code));
 }
 
@@ -384,7 +431,7 @@ export async function listCoupons(limit = 200): Promise<CouponView[]> {
   codes.forEach((_, i) => {
     const rec = parseJson<CouponRecord>(recs[i]);
     if (!rec || !isCouponKind(rec.kind)) return;
-    out.push(toView(rec, parseJson<{ at?: number }>(useds[i]), offs[i] != null, locks[i] != null));
+    out.push(toView(rec, parseJson<UsedRecord>(useds[i]), offs[i] != null, locks[i] != null));
   });
   return out.sort((a, b) => b.createdAt - a.createdAt);
 }

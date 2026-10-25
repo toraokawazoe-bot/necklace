@@ -13,6 +13,24 @@ type Coupon = {
   createdAt: number;
   status: "unused" | "reserved" | "used" | "disabled";
   redeemedAt: number | null;
+  usedVia: "ec" | "order" | null;
+  usedBy: string | null;
+};
+
+function statusOf(c: Coupon): { label: string; cls: string } {
+  if (c.status === "used") {
+    return {
+      ...STATUS.used,
+      label: c.usedVia === "order" ? "使用済み（オーダー）" : "使用済み（EC）",
+    };
+  }
+  return STATUS[c.status];
+}
+
+const NOT_USABLE: Record<Exclude<Coupon["status"], "unused">, string> = {
+  reserved: "ECの決済の手続き中のため、いまは使用済みにできません",
+  used: "すでに使用済みです",
+  disabled: "無効になっているため使えません",
 };
 
 const STATUS: Record<Coupon["status"], { label: string; cls: string }> = {
@@ -49,6 +67,11 @@ export function CouponManager({
   const [copied, setCopied] = useState<"ok" | "fail" | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [found, setFound] = useState<Coupon | null>(null);
+  const [searchMsg, setSearchMsg] = useState<string | null>(null);
+  const [using, setUsing] = useState(false);
   const codeRef = useRef<HTMLButtonElement>(null);
 
   async function issue() {
@@ -106,6 +129,55 @@ export function CouponManager({
     }
   }
 
+  async function search(e?: React.FormEvent) {
+    e?.preventDefault();
+    const q = query.trim();
+    if (!q) return;
+    setSearching(true);
+    setFound(null);
+    setSearchMsg(null);
+    try {
+      const res = await fetch(`/api/admin/coupons/${encodeURIComponent(q)}`);
+      const body = (await res.json().catch(() => ({}))) as { coupon?: Coupon; error?: string };
+      if (res.status === 404 || res.status === 400) {
+        setSearchMsg("見つかりません。コードを確かめてください");
+      } else if (!res.ok || !body.coupon) {
+        throw new Error(body.error ?? `HTTP ${res.status}`);
+      } else {
+        setFound(body.coupon);
+      }
+    } catch (err) {
+      setSearchMsg(err instanceof Error ? err.message : "検索に失敗しました");
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  async function useByOrder(c: Coupon) {
+    if (!window.confirm(`${c.code} をオーダーで使用済みにします。元に戻せません。`)) return;
+    setUsing(true);
+    setSearchMsg(null);
+    try {
+      const res = await fetch(`/api/admin/coupons/${encodeURIComponent(c.code)}/use`, {
+        method: "POST",
+      });
+      const body = (await res.json().catch(() => ({}))) as { coupon?: Coupon; error?: string };
+      if (!res.ok) {
+        setSearchMsg(body.error ?? `HTTP ${res.status}`);
+        // 状態が変わっていることがあるので最新を引き直す
+        await search();
+        setSearchMsg(body.error ?? null);
+        return;
+      }
+      if (body.coupon) setFound(body.coupon);
+      router.refresh();
+    } catch (err) {
+      setSearchMsg(err instanceof Error ? err.message : "使用済みにできませんでした");
+    } finally {
+      setUsing(false);
+    }
+  }
+
   async function disable(c: Coupon) {
     if (!window.confirm(`${c.code} を無効にします。元には戻せません。`)) return;
     setBusyId(c.id);
@@ -127,6 +199,69 @@ export function CouponManager({
 
   return (
     <div className="mt-6 space-y-8">
+      <section className="rounded-xl border border-border bg-white/60 p-4 sm:p-5">
+        <h2 className="text-base font-medium">コードを調べる（DMで受け取ったコード）</h2>
+        <form onSubmit={search} className="mt-2 flex gap-2">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="740-XXXXXX"
+            aria-label="クーポンコード"
+            autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
+            maxLength={40}
+            className="min-h-12 min-w-0 flex-1 rounded-lg border border-border bg-white px-3 font-mono text-base"
+          />
+          <button
+            type="submit"
+            disabled={searching || !query.trim() || Boolean(loadError)}
+            className="min-h-12 shrink-0 rounded-full bg-foreground px-6 text-base font-medium text-background disabled:opacity-50"
+          >
+            {searching ? "検索中…" : "調べる"}
+          </button>
+        </form>
+        {searchMsg ? (
+          <p role="alert" className="mt-3 text-base text-[var(--accent-red)]">
+            {searchMsg}
+          </p>
+        ) : null}
+        {found ? (
+          <div className="mt-4 rounded-xl border border-foreground bg-background p-4">
+            <div className="flex items-start justify-between gap-3">
+              <span className="break-all font-mono text-xl font-bold tracking-wide">
+                {found.code}
+              </span>
+              <span
+                className={`inline-block shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-base font-medium ${statusOf(found).cls}`}
+              >
+                {statusOf(found).label}
+              </span>
+            </div>
+            <p className="mt-2 text-base font-medium">{found.kindLabel}</p>
+            <p className="mt-2 text-base text-muted-foreground">
+              発行 {formatDate(found.createdAt)}
+              {found.status === "used"
+                ? ` ・ 使用 ${found.redeemedAt ? formatDate(found.redeemedAt) : "日時不明"}`
+                : ""}
+            </p>
+            {found.status === "unused" ? (
+              <button
+                type="button"
+                onClick={() => useByOrder(found)}
+                disabled={using}
+                className="mt-4 min-h-14 w-full rounded-full bg-foreground px-6 text-base font-medium text-background transition hover:opacity-90 disabled:opacity-50"
+              >
+                {using ? "処理中…" : "オーダーで使用済みにする"}
+              </button>
+            ) : (
+              <p className="mt-3 text-base text-muted-foreground">{NOT_USABLE[found.status]}</p>
+            )}
+          </div>
+        ) : null}
+      </section>
+
       <section className="rounded-xl border border-border bg-white/60 p-4 sm:p-5">
         <label htmlFor="coupon-note" className="block text-base font-medium">
           渡す相手・メモ（任意）
@@ -221,9 +356,9 @@ export function CouponManager({
                     {c.code}
                   </span>
                   <span
-                    className={`inline-block shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-base font-medium ${STATUS[c.status].cls}`}
+                    className={`inline-block shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-base font-medium ${statusOf(c).cls}`}
                   >
-                    {STATUS[c.status].label}
+                    {statusOf(c).label}
                   </span>
                 </div>
                 <p className="mt-2 text-base font-medium">{c.kindLabel}</p>
