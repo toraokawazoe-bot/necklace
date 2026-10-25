@@ -17,8 +17,8 @@ import {
 } from "@/lib/product-category";
 
 const SIZE_OPTIONS = [
-  { cm: 38, label: "短めの長さ", note: "首元に沿いやすい長さ" },
-  { cm: 41, label: "やや長めの長さ", note: "少しゆとりのある長さ" },
+  { cm: 38, label: "短めの長さ", note: "首元に近い長さ" },
+  { cm: 41, label: "やや長めの長さ", note: "少し下に落ちる長さ" },
 ];
 
 // カスタム長さの範囲(チェックアウトAPI側のバリデーションと合わせる。定義は lib/product-category.ts)
@@ -194,7 +194,7 @@ export function ProductBuy({
         </div>
         {isCustom && (
           <p className="font-hand mt-2 text-[12px] leading-[1.6] text-muted-foreground">
-            目安: 首回り +6cm で首元に沿わせる長さ、+8〜10cm でゆとりのある長さ
+            目安: レディースは首回り +4cm、メンズは首回り +5cm
           </p>
         )}
         <p className="font-hand mt-3 text-[12px] leading-[1.6] text-muted-foreground">

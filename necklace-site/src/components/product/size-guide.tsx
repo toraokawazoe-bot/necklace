@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-// カスタム長さ 33〜50cm に収まる首回りの範囲(首元に沿わせる目安 = 首回り+6cm)
+// カスタム長さ 33〜50cm に収まる首回りの範囲(目安 = レディース 首回り+4cm / メンズ 首回り+5cm)
 const NECK_MIN = 27;
 const NECK_MAX = 44;
 const NECK_PRESETS = [30, 33, 36, 39];
@@ -134,8 +134,9 @@ export function SizeGuide({
 export function SizeGuideContent() {
   const [neck, setNeck] = useState(33);
 
-  const just = neck + 6;
-  const loose = [neck + 8, neck + 10];
+  const ladies = neck + 4;
+  const mens = neck + 5;
+  const presetHits = [ladies, mens].filter((v) => v === 38 || v === 41);
 
   return (
     <>
@@ -152,13 +153,13 @@ export function SizeGuideContent() {
       </p>
       <p className="font-hand mt-2 text-[15px] leading-[1.8] text-foreground/85">
         まずは首回りを測って、好みの着け心地に合わせて長さを選びましょう。
-        首元に沿わせたい方は<strong>「首回り＋6cm」</strong>、
-        少しゆとりを持たせたい方は<strong>「首回り＋8〜10cm」</strong>が目安です。
+        レディースは<strong>「首回り＋4cm」</strong>、
+        メンズは<strong>「首回り＋5cm」</strong>くらいが目安です。
         <span className="mt-1 block text-[13.5px] text-muted-foreground">
-          着用位置は首の形や体格によって変わります。数値は選ぶときの目安としてご覧ください。
+          着用位置は首の形や体格、好みによって変わります。数値は選ぶときの目安としてご覧ください。
         </span>
         <span className="mt-1 block text-[13.5px] text-muted-foreground">
-          例：首回りが33cmの場合、首元に沿わせるなら39cm、ゆとりを持たせるなら41〜43cmが目安です。
+          例：首回りが33cmの場合、レディースは37cm、メンズは38cmが目安です。
         </span>
       </p>
     </section>
@@ -199,8 +200,8 @@ export function SizeGuideContent() {
         <li className="flex gap-2">
           <span style={{ color: "var(--bead-brown)" }}>4.</span>
           <span>
-            首回りに <strong>＋6cm で首元に沿わせる長さ</strong>、
-            <strong>＋8〜10cm でゆとりを持たせる長さ</strong>が目安です
+            首回りに <strong>レディースは＋4cm</strong>、
+            <strong>メンズは＋5cm</strong> が目安です
           </span>
         </li>
       </ol>
@@ -273,10 +274,10 @@ export function SizeGuideContent() {
               className="font-hand text-[12px]"
               style={{ color: "var(--bead-blue)" }}
             >
-              首元に沿わせる目安（＋6cm）
+              レディースの目安（＋4cm）
             </p>
             <p className="font-marker mt-1 text-[24px] leading-none">
-              {just}cm
+              {ladies}cm
             </p>
           </div>
           <div
@@ -287,17 +288,17 @@ export function SizeGuideContent() {
               className="font-hand text-[12px]"
               style={{ color: "var(--bead-rust)" }}
             >
-              ゆとりを持たせる目安（＋8〜10cm）
+              メンズの目安（＋5cm）
             </p>
             <p className="font-marker mt-1 text-[24px] leading-none">
-              {loose[0]}〜{loose[1]}cm
+              {mens}cm
             </p>
           </div>
         </div>
         <p className="font-hand mt-3 text-[13px] leading-[1.7] text-muted-foreground">
-          {just === 38 || just === 41
-            ? `選べる長さの ${just}cm が、首元に沿わせる目安に当たります。`
-            : `サイズ選択の「好きな長さを指定する」から ${just}cm を1cm単位・同価格で指定できます。`}
+          {presetHits.length > 0
+            ? `選べる長さの ${presetHits.join("cm・")}cm が、目安に当たります。`
+            : `サイズ選択の「好きな長さを指定する」から ${ladies}cm・${mens}cm を1cm単位・同価格で指定できます。`}
         </p>
       </div>
     </section>
@@ -314,35 +315,35 @@ export function SizeGuideContent() {
         <thead>
           <tr className="border-b border-border text-[13px] text-muted-foreground">
             <th className="py-2 font-normal">首回り</th>
-            <th className="py-2 font-normal">首元に沿わせる目安</th>
-            <th className="py-2 font-normal">ゆとりを持たせる目安</th>
+            <th className="py-2 font-normal">レディース（＋4cm）</th>
+            <th className="py-2 font-normal">メンズ（＋5cm）</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
           <tr>
             <td className="py-2.5">30cm</td>
-            <td className="py-2.5 font-semibold">36cm</td>
-            <td className="py-2.5">38〜40cm</td>
+            <td className="py-2.5 font-semibold">34cm</td>
+            <td className="py-2.5">35cm</td>
           </tr>
           <tr>
             <td className="py-2.5">32cm</td>
-            <td className="py-2.5 font-semibold">38cm</td>
-            <td className="py-2.5">40〜42cm</td>
+            <td className="py-2.5 font-semibold">36cm</td>
+            <td className="py-2.5">37cm</td>
           </tr>
           <tr>
             <td className="py-2.5">33cm</td>
-            <td className="py-2.5 font-semibold">39cm</td>
-            <td className="py-2.5">41〜43cm</td>
+            <td className="py-2.5 font-semibold">37cm</td>
+            <td className="py-2.5">38cm</td>
           </tr>
           <tr>
             <td className="py-2.5">35cm</td>
-            <td className="py-2.5 font-semibold">41cm</td>
-            <td className="py-2.5">43〜45cm</td>
+            <td className="py-2.5 font-semibold">39cm</td>
+            <td className="py-2.5">40cm</td>
           </tr>
           <tr>
             <td className="py-2.5">39cm</td>
-            <td className="py-2.5 font-semibold">45cm</td>
-            <td className="py-2.5">47〜49cm</td>
+            <td className="py-2.5 font-semibold">43cm</td>
+            <td className="py-2.5">44cm</td>
           </tr>
         </tbody>
       </table>
@@ -355,13 +356,13 @@ export function SizeGuideContent() {
   );
 }
 
-/** 首元〜鎖骨の線画。ジャスト(+6cm) / ゆったり(+8〜10cm) の落ちる位置をビーズ風の点線で示す */
+/** 首元〜鎖骨の線画。レディース(+4cm) / メンズ(+5cm) の落ちる位置をビーズ風の点線で示す */
 function NeckIllustration() {
   return (
     <svg
       viewBox="0 0 320 180"
       role="img"
-      aria-label="首回り+6cmと+8〜10cmで、ネックレスが落ちる位置の違いを示すイラスト"
+      aria-label="レディース首回り+4cmとメンズ首回り+5cmで、ネックレスが落ちる位置の違いを示すイラスト"
       className="mx-auto block w-full max-w-[320px]"
     >
       {/* 顔の輪郭(あご) */}
@@ -467,7 +468,7 @@ function NeckIllustration() {
         首の真ん中をひと巻き
       </text>
 
-      {/* ジャスト(+6cm): 首元フィット (ビーズ風ドット) */}
+      {/* レディース(+4cm): 首元寄り (ビーズ風ドット) */}
       <path
         d="M132 70 Q160 96 188 70"
         fill="none"
@@ -476,7 +477,7 @@ function NeckIllustration() {
         strokeLinecap="round"
         strokeDasharray="0.1 8"
       />
-      {/* ゆったり(+8〜10cm): 鎖骨ライン */}
+      {/* メンズ(+5cm): やや下 (ビーズ風ドット) */}
       <path
         d="M124 88 Q160 132 196 88"
         fill="none"
@@ -504,7 +505,7 @@ function NeckIllustration() {
         fill="var(--bead-blue)"
         className="font-hand"
       >
-        首回り＋6cm
+        レディース＋4cm
       </text>
       <text
         x="236"
@@ -513,7 +514,7 @@ function NeckIllustration() {
         fill="var(--bead-blue)"
         className="font-hand"
       >
-        首元に沿わせる
+        首回りに＋4cm
       </text>
 
       <line
@@ -533,7 +534,7 @@ function NeckIllustration() {
         fill="var(--bead-rust)"
         className="font-hand"
       >
-        ＋8〜10cm
+        メンズ＋5cm
       </text>
       <text
         x="220"
@@ -542,7 +543,7 @@ function NeckIllustration() {
         fill="var(--bead-rust)"
         className="font-hand"
       >
-        ゆとりを持たせる
+        首回りに＋5cm
       </text>
     </svg>
   );
